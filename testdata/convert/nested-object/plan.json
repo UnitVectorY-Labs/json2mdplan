@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "e3cff5efa826e1bc98a204282ff85a29999f407ae7f1d6c6edf20c6022c2ab60",
+    "canonicalization": "json-canonical-v1",
+    "source_hint": "nested-object/schema.json"
+  },
+  "settings": {
+    "base_heading_level": 1,
+    "include_descriptions": false,
+    "default_array_mode": "objects_as_subsections",
+    "fallback_mode": "json_code_block"
+  },
+  "overrides": [
+    {
+      "path": "/name",
+      "role": "document_title"
+    }
+  ]
+}

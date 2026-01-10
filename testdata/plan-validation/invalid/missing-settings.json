@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "abc123def456",
+    "canonicalization": "json-canonical-v1"
+  },
+  "overrides": []
+}

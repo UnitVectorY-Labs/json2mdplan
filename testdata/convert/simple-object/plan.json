@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "e1d053730b2e20ff46d693608d496798c72f10c9a1f90669f2d9a9ac9aebeefc",
+    "canonicalization": "json-canonical-v1",
+    "source_hint": "simple-object/schema.json"
+  },
+  "settings": {
+    "base_heading_level": 1,
+    "include_descriptions": false,
+    "default_array_mode": "objects_as_subsections",
+    "fallback_mode": "json_code_block"
+  },
+  "overrides": [
+    {
+      "path": "/title",
+      "role": "document_title"
+    },
+    {
+      "path": "/description",
+      "role": "prominent_paragraph"
+    }
+  ]
+}

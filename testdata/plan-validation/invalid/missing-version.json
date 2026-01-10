@@ -1,0 +1,13 @@
+{
+  "schema_fingerprint": {
+    "sha256": "abc123def456",
+    "canonicalization": "json-canonical-v1"
+  },
+  "settings": {
+    "base_heading_level": 1,
+    "include_descriptions": true,
+    "default_array_mode": "objects_as_subsections",
+    "fallback_mode": "json_code_block"
+  },
+  "overrides": []
+}

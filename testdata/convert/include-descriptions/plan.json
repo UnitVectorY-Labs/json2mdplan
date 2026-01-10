@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "72bb64689c1b2b7bf02519168b3a9cc35ef8ee6f4d03cffdcda1ca8a34247b5d",
+    "canonicalization": "json-canonical-v1",
+    "source_hint": "include-descriptions/schema.json"
+  },
+  "settings": {
+    "base_heading_level": 1,
+    "include_descriptions": true,
+    "default_array_mode": "objects_as_subsections",
+    "fallback_mode": "json_code_block"
+  },
+  "overrides": []
+}

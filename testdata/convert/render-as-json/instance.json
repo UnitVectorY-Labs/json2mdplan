@@ -1,0 +1,10 @@
+{
+  "title": "Document with Complex Data",
+  "config": {
+    "setting1": "value1",
+    "setting2": 42,
+    "nested": {
+      "deep": true
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "type": "object",
+  "properties": {
+    "level1": {
+      "type": "object",
+      "title": "Level 1",
+      "properties": {
+        "level2": {
+          "type": "object",
+          "title": "Level 2",
+          "properties": {
+            "level3": {
+              "type": "object",
+              "title": "Level 3",
+              "properties": {
+                "level4": {
+                  "type": "object",
+                  "title": "Level 4",
+                  "properties": {
+                    "level5": {
+                      "type": "object",
+                      "title": "Level 5",
+                      "properties": {
+                        "level6": {
+                          "type": "object",
+                          "title": "Level 6",
+                          "properties": {
+                            "level7": {
+                              "type": "object",
+                              "title": "Level 7",
+                              "properties": {
+                                "deep": {
+                                  "type": "string",
+                                  "title": "Deep Value"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
