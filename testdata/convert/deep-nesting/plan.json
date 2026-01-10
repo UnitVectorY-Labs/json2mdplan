@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "8d7d237405e738d9158ae55221564a6e5898c9871f7bf8d00ed4e946106172b5",
+    "canonicalization": "json-canonical-v1",
+    "source_hint": "deep-nesting/schema.json"
+  },
+  "settings": {
+    "base_heading_level": 1,
+    "include_descriptions": false,
+    "default_array_mode": "objects_as_subsections",
+    "fallback_mode": "json_code_block"
+  },
+  "overrides": []
+}
