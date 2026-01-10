@@ -1,6 +1,6 @@
 module github.com/UnitVectorY-Labs/json2mdplan
 
-go 1.25.5
+go 1.25.5 // GOVERSION
 
 require (
 	github.com/UnitVectorY-Labs/gcpvalidate v0.1.1

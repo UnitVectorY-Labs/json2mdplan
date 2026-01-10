@@ -1,0 +1,35 @@
+title: json2mdplan
+description: "Unix-style CLI that extracts structure-only JSON, uses Vertex AI (Gemini) structured outputs to generate a schema-validated Markdown plan, then renders Markdown locally from the original JSON without sending raw values to the model."
+
+remote_theme: just-the-docs/just-the-docs@v0.10.2
+plugins:
+  - jekyll-remote-theme
+
+callouts:
+  highlight:
+    color: yellow
+  important:
+    title: Important
+    color: blue
+  new:
+    title: New
+    color: green
+  note:
+    title: Note
+    color: purple
+  warning:
+    title: Warning
+    color: red
+
+# External navigation links
+nav_external_links:
+  - title: json2mdplan on GitHub
+    url: https://github.com/UnitVectorY-Labs/json2mdplan
+
+# Footer "Edit this page on GitHub" link text
+gh_edit_link: true
+gh_edit_link_text: "Edit this page on GitHub."
+gh_edit_repository: "https://github.com/UnitVectorY-Labs/json2mdplan"
+gh_edit_branch: "main"
+gh_edit_source: "docs"
+gh_edit_view_mode: "tree"
