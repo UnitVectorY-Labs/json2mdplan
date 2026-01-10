@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "List",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "List Title"
+    },
+    "items": {
+      "type": "array",
+      "title": "Items",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["title"]
+}

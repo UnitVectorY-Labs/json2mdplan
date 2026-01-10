@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "title": "Document",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "content": {
+      "type": "string",
+      "title": "Content"
+    },
+    "internal_id": {
+      "type": "string",
+      "title": "Internal ID",
+      "description": "Internal identifier not for display"
+    }
+  },
+  "required": ["title", "content"]
+}

@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "title": "Config Document",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "config": {
+      "type": "object",
+      "title": "Configuration",
+      "properties": {
+        "setting1": {
+          "type": "string"
+        },
+        "setting2": {
+          "type": "integer"
+        },
+        "nested": {
+          "type": "object",
+          "properties": {
+            "deep": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["title"]
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "abc123def456",
+    "canonicalization": "json-canonical-v1",
+    "source_hint": "example.schema.json"
+  },
+  "settings": {
+    "base_heading_level": 2,
+    "include_descriptions": false,
+    "default_array_mode": "scalars_as_paragraphs",
+    "fallback_mode": "json_code_block"
+  },
+  "overrides": [
+    {
+      "path": "/title",
+      "role": "document_title"
+    },
+    {
+      "path": "/description",
+      "role": "prominent_paragraph"
+    },
+    {
+      "path": "",
+      "role": "object_order",
+      "order": ["title", "description", "content"]
+    },
+    {
+      "path": "/items",
+      "role": "array_section",
+      "item_title_from": "/name",
+      "item_title_fallback": "Item {{index}}"
+    },
+    {
+      "path": "/internal",
+      "role": "suppress"
+    },
+    {
+      "path": "/complex",
+      "role": "render_as_json"
+    },
+    {
+      "path": "/main",
+      "role": "section"
+    }
+  ]
+}

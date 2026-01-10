@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "title": "Project",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Project Name"
+    },
+    "metadata": {
+      "type": "object",
+      "title": "Metadata",
+      "properties": {
+        "version": {
+          "type": "string",
+          "title": "Version"
+        },
+        "status": {
+          "type": "string",
+          "title": "Status"
+        }
+      },
+      "required": ["version"]
+    }
+  },
+  "required": ["name"]
+}

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "b0f83c2d58a893e5f1e4e383896781236e0b5578452525670157d417056ff9bf",
+    "canonicalization": "json-canonical-v1",
+    "source_hint": "object-order/schema.json"
+  },
+  "settings": {
+    "base_heading_level": 1,
+    "include_descriptions": false,
+    "default_array_mode": "objects_as_subsections",
+    "fallback_mode": "json_code_block"
+  },
+  "overrides": [
+    {
+      "path": "",
+      "role": "object_order",
+      "order": ["gamma", "beta", "alpha"]
+    }
+  ]
+}

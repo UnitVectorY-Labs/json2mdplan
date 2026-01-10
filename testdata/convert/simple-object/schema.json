@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "title": "Simple Document",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title",
+      "description": "The document title"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description",
+      "description": "A brief description"
+    },
+    "author": {
+      "type": "string",
+      "title": "Author",
+      "description": "The author name"
+    }
+  },
+  "required": ["title", "description"]
+}
