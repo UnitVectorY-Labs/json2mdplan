@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -25,6 +26,13 @@ import (
 
 var Version = "dev" // This will be set by the build system to the release version
 
+// Embedded files
+//go:embed plan-schema.json
+var planSchemaJSON string
+
+//go:embed plan-system-instructions.md
+var systemInstructions string
+
 // Schema validation constants
 const planSchemaValidationURL = "plan-schema.json"
 const inputSchemaValidationURL = "input-schema.json"
@@ -36,136 +44,6 @@ const (
 	exitValidationError = 4
 	exitAPIError        = 5
 )
-
-// Plan JSON Schema v1 (embedded)
-const planSchemaJSON = `{
-  "type": "object",
-  "title": "json2mdplan Plan v1",
-  "description": "A minimal plan that guides deterministic JSON-to-Markdown rendering (headings + paragraphs only).",
-  "properties": {
-    "version": {
-      "type": "integer",
-      "description": "Plan format version. Must be 1 for this schema."
-    },
-    "schema_fingerprint": {
-      "type": "object",
-      "description": "Fingerprint of the JSON Schema used to generate this plan. Used to enforce strict compatibility.",
-      "properties": {
-        "sha256": {
-          "type": "string",
-          "description": "SHA-256 hash of the canonicalized, resolved schema."
-        },
-        "canonicalization": {
-          "type": "string",
-          "description": "Name of the canonicalization algorithm used prior to hashing."
-        },
-        "source_hint": {
-          "type": "string",
-          "description": "Optional human hint, e.g. schema file name or identifier."
-        }
-      },
-      "required": ["sha256", "canonicalization"]
-    },
-    "settings": {
-      "type": "object",
-      "description": "Global rendering settings.",
-      "properties": {
-        "base_heading_level": {
-          "type": "integer",
-          "description": "Starting Markdown heading level at the document root. Typical value is 1."
-        },
-        "include_descriptions": {
-          "type": "boolean",
-          "description": "If true, include JSON Schema descriptions as paragraphs under headings."
-        },
-        "default_array_mode": {
-          "type": "string",
-          "description": "Default rendering for arrays when no override exists.",
-          "enum": ["objects_as_subsections", "scalars_as_paragraphs", "fallback_json"]
-        },
-        "fallback_mode": {
-          "type": "string",
-          "description": "How to render unsupported or ambiguous structures.",
-          "enum": ["json_code_block"]
-        }
-      },
-      "required": ["base_heading_level", "include_descriptions", "default_array_mode", "fallback_mode"]
-    },
-    "overrides": {
-      "type": "array",
-      "description": "Small set of path-based overrides. Keep this list minimal.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "JSON Pointer to the targeted node. Use \"\" for root, otherwise start with '/'."
-          },
-          "role": {
-            "type": "string",
-            "description": "Override role. The converter enforces role-specific requirements.",
-            "enum": [
-              "document_title",
-              "prominent_paragraph",
-              "section",
-              "object_order",
-              "array_section",
-              "suppress",
-              "render_as_json"
-            ]
-          },
-          "order": {
-            "type": "array",
-            "description": "For role=object_order. Property names to render first, in this order.",
-            "items": { "type": "string" }
-          },
-          "item_title_from": {
-            "type": "string",
-            "description": "For role=array_section. JSON Pointer relative to the array item object (example: '/name')."
-          },
-          "item_title_fallback": {
-            "type": "string",
-            "description": "For role=array_section. Fallback title. Only '{{index}}' template is supported."
-          }
-        },
-        "required": ["path", "role"]
-      }
-    }
-  },
-  "required": ["version", "schema_fingerprint", "settings", "overrides"]
-}`
-
-// System instructions for plan generation
-const systemInstructions = `You are generating a JSON plan for json2mdplan.
-
-Your task:
-- Read the provided Schema Digest (derived from a JSON Schema).
-- Produce a minimal, elegant Plan JSON object that conforms exactly to the provided Plan JSON Schema.
-- The goal is deterministic JSON-to-Markdown rendering with headings and paragraphs only.
-
-Hard rules:
-- Output only JSON. Do not include markdown, commentary, or code fences.
-- Do not invent paths. Every override path must exist in the digest path_index.
-- Keep the number of overrides small. Prefer defaults unless an override materially improves readability.
-- Do not create a template language. Use only the roles defined by the schema.
-- Prefer stable, meaning-based ordering:
-  - Add object_order overrides only for a small number of important objects (usually root and a few key sub-objects).
-  - In object_order lists, include only properties that exist at that object path.
-- Choose a document_title:
-  - Prefer a top-level string field that looks like a title, name, or summary identifier.
-  - If none exists, do not add a document_title override.
-- Choose at most one prominent_paragraph:
-  - Prefer a top-level string field described as summary, description, overview, or abstract.
-- Arrays of objects:
-  - If there is a clear name/title field on the item (often "name", "title", "id"), add an array_section override with item_title_from pointing to it.
-  - Otherwise use item_title_fallback "Item {{index}}".
-- Suppress:
-  - Suppress clearly noisy fields such as internal ids, debug blobs, or raw duplicated text only if the schema descriptions indicate they are not meant for the rendered document.
-- When schema shapes look complex or ambiguous (for example arrays of arrays, union-heavy fields), prefer render_as_json on the smallest affected subtree.
-
-Quality goals:
-- The output Markdown should read like a document.
-- Use the schema titles and descriptions implicitly to decide what should come first.`
 
 // CLI flags
 var (

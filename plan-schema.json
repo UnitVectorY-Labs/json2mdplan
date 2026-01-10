@@ -1,0 +1,96 @@
+{
+  "type": "object",
+  "title": "json2mdplan Plan v1",
+  "description": "A minimal plan that guides deterministic JSON-to-Markdown rendering (headings + paragraphs only).",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "Plan format version. Must be 1 for this schema."
+    },
+    "schema_fingerprint": {
+      "type": "object",
+      "description": "Fingerprint of the JSON Schema used to generate this plan. Used to enforce strict compatibility.",
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "description": "SHA-256 hash of the canonicalized, resolved schema."
+        },
+        "canonicalization": {
+          "type": "string",
+          "description": "Name of the canonicalization algorithm used prior to hashing."
+        },
+        "source_hint": {
+          "type": "string",
+          "description": "Optional human hint, e.g. schema file name or identifier."
+        }
+      },
+      "required": ["sha256", "canonicalization"]
+    },
+    "settings": {
+      "type": "object",
+      "description": "Global rendering settings.",
+      "properties": {
+        "base_heading_level": {
+          "type": "integer",
+          "description": "Starting Markdown heading level at the document root. Typical value is 1."
+        },
+        "include_descriptions": {
+          "type": "boolean",
+          "description": "If true, include JSON Schema descriptions as paragraphs under headings."
+        },
+        "default_array_mode": {
+          "type": "string",
+          "description": "Default rendering for arrays when no override exists.",
+          "enum": ["objects_as_subsections", "scalars_as_paragraphs", "fallback_json"]
+        },
+        "fallback_mode": {
+          "type": "string",
+          "description": "How to render unsupported or ambiguous structures.",
+          "enum": ["json_code_block"]
+        }
+      },
+      "required": ["base_heading_level", "include_descriptions", "default_array_mode", "fallback_mode"]
+    },
+    "overrides": {
+      "type": "array",
+      "description": "Small set of path-based overrides. Keep this list minimal.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "JSON Pointer to the targeted node. Use \"\" for root, otherwise start with '/'."
+          },
+          "role": {
+            "type": "string",
+            "description": "Override role. The converter enforces role-specific requirements.",
+            "enum": [
+              "document_title",
+              "prominent_paragraph",
+              "section",
+              "object_order",
+              "array_section",
+              "suppress",
+              "render_as_json"
+            ]
+          },
+          "order": {
+            "type": "array",
+            "description": "For role=object_order. Property names to render first, in this order.",
+            "items": { "type": "string" }
+          },
+          "item_title_from": {
+            "type": "string",
+            "description": "For role=array_section. JSON Pointer relative to the array item object (example: '/name')."
+          },
+          "item_title_fallback": {
+            "type": "string",
+            "description": "For role=array_section. Fallback title. Only '{{index}}' template is supported."
+          }
+        },
+        "required": ["path", "role"]
+      }
+    }
+  },
+  "required": ["version", "schema_fingerprint", "settings", "overrides"]
+}
