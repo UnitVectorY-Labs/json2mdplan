@@ -6,9 +6,7 @@
   },
   "settings": {
     "base_heading_level": 1,
-    "include_descriptions": true,
-    "default_array_mode": "invalid_mode",
-    "fallback_mode": "json_code_block"
+    "null_text": 123
   },
-  "overrides": []
+  "directives": []
 }

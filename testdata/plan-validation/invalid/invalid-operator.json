@@ -7,5 +7,10 @@
   "settings": {
     "base_heading_level": 1
   },
-  "directives": []
+  "directives": [
+    {
+      "op": "invalid_operator",
+      "text": {"literal": "test"}
+    }
+  ]
 }
