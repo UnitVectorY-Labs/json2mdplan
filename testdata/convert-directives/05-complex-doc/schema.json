@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {"type": "string"},
+    "summary": {"type": "string"},
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "author": {"type": "string"},
+        "date": {"type": "string"},
+        "version": {"type": "string"}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string"},
+          "priority": {"type": "string"}
+        }
+      }
+    }
+  }
+}

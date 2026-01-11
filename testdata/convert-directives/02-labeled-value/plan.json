@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "canonicalization": "json-canonical-v1"
+  },
+  "settings": {
+    "base_heading_level": 1
+  },
+  "directives": [
+    {
+      "op": "heading",
+      "level": 1,
+      "text": {"literal": "Metadata"}
+    },
+    {
+      "op": "labeled_value_line",
+      "label": {"literal": "Status"},
+      "value": {"path": "/status", "from": "root"}
+    },
+    {
+      "op": "labeled_value_line",
+      "label": {"literal": "Version"},
+      "value": {"path": "/version", "from": "root"}
+    },
+    {
+      "op": "labeled_value_line",
+      "label": {"literal": "Count"},
+      "value": {"path": "/count", "from": "root"},
+      "value_format": "number"
+    }
+  ]
+}

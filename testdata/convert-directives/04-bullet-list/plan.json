@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "canonicalization": "json-canonical-v1"
+  },
+  "settings": {
+    "base_heading_level": 1
+  },
+  "directives": [
+    {
+      "op": "heading",
+      "level": 1,
+      "text": {"literal": "Highlights"}
+    },
+    {
+      "op": "bullet_list",
+      "items": {"path": "/highlights", "from": "root"},
+      "item_format": "text"
+    }
+  ]
+}

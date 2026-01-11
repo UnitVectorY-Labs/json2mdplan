@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "canonicalization": "json-canonical-v1"
+  },
+  "settings": {
+    "base_heading_level": 1
+  },
+  "directives": [
+    {
+      "op": "heading",
+      "level": 1,
+      "text": {"value": {"path": "/title", "from": "root"}}
+    },
+    {
+      "op": "text_line",
+      "text": {"value": {"path": "/summary", "from": "root"}}
+    },
+    {
+      "op": "heading",
+      "level": 2,
+      "text": {"literal": "Metadata"}
+    },
+    {
+      "op": "with_scope",
+      "value": {"path": "/metadata", "from": "root"},
+      "do": [
+        {
+          "op": "labeled_value_line",
+          "label": {"literal": "Author"},
+          "value": {"path": "/author", "from": "current"}
+        },
+        {
+          "op": "labeled_value_line",
+          "label": {"literal": "Date"},
+          "value": {"path": "/date", "from": "current"}
+        },
+        {
+          "op": "labeled_value_line",
+          "label": {"literal": "Version"},
+          "value": {"path": "/version", "from": "current"}
+        }
+      ]
+    },
+    {
+      "op": "heading",
+      "level": 2,
+      "text": {"literal": "Key Findings"}
+    },
+    {
+      "op": "bullet_list",
+      "items": {"path": "/findings", "from": "root"},
+      "item_format": "text"
+    },
+    {
+      "op": "heading",
+      "level": 2,
+      "text": {"literal": "Recommendations"}
+    },
+    {
+      "op": "for_each",
+      "array": {"path": "/recommendations", "from": "root"},
+      "do": [
+        {
+          "op": "heading",
+          "level": 3,
+          "text": {
+            "concat": [
+              {"value": {"path": "/id", "from": "current"}},
+              {"literal": ": "},
+              {"value": {"path": "/title", "from": "current"}}
+            ]
+          }
+        },
+        {
+          "op": "labeled_value_line",
+          "label": {"literal": "Priority"},
+          "value": {"path": "/priority", "from": "current"}
+        }
+      ]
+    }
+  ]
+}

@@ -1196,6 +1196,9 @@ func (interp *DirectiveInterpreter) execLabeledValueLine(directive Directive) {
 		return
 	}
 
+	// Escape label before applying style
+	label = escapeMarkdown(label)
+
 	labelStyle := "bold"
 	if ls, ok := directive["label_style"].(string); ok {
 		labelStyle = ls

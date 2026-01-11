@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "canonicalization": "json-canonical-v1"
+  },
+  "settings": {
+    "base_heading_level": 1
+  },
+  "directives": [
+    {
+      "op": "heading",
+      "level": 1,
+      "text": {"literal": "Items"}
+    },
+    {
+      "op": "for_each",
+      "array": {"path": "/items", "from": "root"},
+      "do": [
+        {
+          "op": "heading",
+          "level": 2,
+          "text": {"value": {"path": "/name", "from": "current"}}
+        },
+        {
+          "op": "text_line",
+          "text": {"value": {"path": "/description", "from": "current"}}
+        }
+      ],
+      "between_items": [
+        {
+          "op": "blank_line"
+        }
+      ]
+    }
+  ]
+}

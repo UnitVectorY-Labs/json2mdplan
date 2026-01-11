@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "highlights": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "canonicalization": "json-canonical-v1"
+  },
+  "settings": {
+    "base_heading_level": 1
+  },
+  "directives": [
+    {
+      "op": "heading",
+      "level": 1,
+      "text": {"value": {"path": "/title", "from": "root"}}
+    },
+    {
+      "op": "heading",
+      "level_from_base": 1,
+      "text": {"literal": "Content Section"}
+    },
+    {
+      "op": "text_line",
+      "text": {"value": {"path": "/content", "from": "root"}}
+    }
+  ]
+}

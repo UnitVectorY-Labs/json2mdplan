@@ -73,6 +73,67 @@ func TestConvert(t *testing.T) {
 	}
 }
 
+// TestConvertDirectives runs data-driven tests for the directive-based convert functionality.
+// Each subdirectory in testdata/convert-directives/ represents a test case with:
+//   - instance.json: the JSON instance to convert
+//   - schema.json: the JSON Schema
+//   - plan.json: the directive-based plan file
+//   - expected.md: the expected Markdown output
+func TestConvertDirectives(t *testing.T) {
+	testdataDir := "testdata/convert-directives"
+	
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("failed to read testdata directory: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		testName := entry.Name()
+		testDir := filepath.Join(testdataDir, testName)
+
+		t.Run(testName, func(t *testing.T) {
+			// Read test files
+			instanceBytes, err := os.ReadFile(filepath.Join(testDir, "instance.json"))
+			if err != nil {
+				t.Fatalf("failed to read instance.json: %v", err)
+			}
+
+			schemaBytes, err := os.ReadFile(filepath.Join(testDir, "schema.json"))
+			if err != nil {
+				t.Fatalf("failed to read schema.json: %v", err)
+			}
+
+			planBytes, err := os.ReadFile(filepath.Join(testDir, "plan.json"))
+			if err != nil {
+				t.Fatalf("failed to read plan.json: %v", err)
+			}
+
+			expectedBytes, err := os.ReadFile(filepath.Join(testDir, "expected.md"))
+			if err != nil {
+				t.Fatalf("failed to read expected.md: %v", err)
+			}
+
+			// Run conversion
+			actual, err := runConversion(instanceBytes, schemaBytes, planBytes)
+			if err != nil {
+				t.Fatalf("conversion failed: %v", err)
+			}
+
+			expected := strings.TrimSpace(string(expectedBytes))
+			actual = strings.TrimSpace(actual)
+
+			if actual != expected {
+				t.Errorf("output mismatch\n\nExpected:\n%s\n\nActual:\n%s\n\nDiff:\n%s", 
+					expected, actual, diff(expected, actual))
+			}
+		})
+	}
+}
+
 // runConversion performs the JSON to Markdown conversion for testing
 func runConversion(instanceBytes, schemaBytes, planBytes []byte) (string, error) {
 	// Parse JSON instance
