@@ -80,9 +80,80 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
 
 For complete usage documentation including all options, environment variables, and command line conventions, see the [Usage documentation](https://unitvectory-labs.github.io/json2mdplan/usage).
 
+## Plan Model
+
+json2mdplan uses a **directive-based interpreter** model. The plan contains a sequential list of directives that are executed top-to-bottom to produce deterministic Markdown output.
+
+### Directive Operators
+
+Plans consist of operators that:
+- **Emit content**: headings, text, bullet lists
+- **Control flow**: loops (`for_each`), conditionals (`if_present`), scoping (`with_scope`)
+- **Format data**: labeled values, text styling, value formatting
+
+Key operators include:
+- `heading` - Emit Markdown headings
+- `text_line` - Emit paragraphs
+- `labeled_value_line` - Display **Label**: value pairs
+- `for_each` - Loop through arrays
+- `bullet_list` - Render arrays as bullet lists
+- `if_present` - Conditional execution
+- `with_scope` - Navigate into objects
+
+For complete operator documentation, see the [Operators documentation](https://unitvectory-labs.github.io/json2mdplan/operators/).
+
+### Example Plan
+
+```json
+{
+  "version": 1,
+  "schema_fingerprint": {
+    "sha256": "abc...",
+    "canonicalization": "json-canonical-v1"
+  },
+  "settings": {
+    "base_heading_level": 1
+  },
+  "directives": [
+    {
+      "op": "heading",
+      "level": 1,
+      "text": {"value": {"path": "/title", "from": "root"}}
+    },
+    {
+      "op": "for_each",
+      "array": {"path": "/items", "from": "root"},
+      "do": [
+        {
+          "op": "heading",
+          "level": 2,
+          "text": {"value": {"path": "/name", "from": "current"}}
+        },
+        {
+          "op": "text_line",
+          "text": {"value": {"path": "/description", "from": "current"}}
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Supported Features
+
+- Headings (H1-H6) with absolute or relative levels
+- Text paragraphs with styling (bold, italic, inline code)
+- Labeled values with customizable separators
+- Bullet lists from arrays
+- Loops with scope management
+- Conditional rendering based on data presence
+- Object scoping for nested structures
+- Text concatenation and formatting
+- Value formatting (text, number, boolean, date, json_compact)
+- Schema title lookups
+
 ## Limitations
 
 - The `--plan` mode requires Gemini API access via Vertex AI
 - Schema complexity may affect plan generation quality
 - Heading levels are clamped at H6 for deeply nested structures
-- v1 supports headings and paragraphs only (no tables, lists, or advanced formatting)

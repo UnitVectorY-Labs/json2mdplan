@@ -68,7 +68,7 @@
     {
       "op": "suppress",
       "path": "/internal",
-      "reason": "Internal field"
+      "reason": "Internal implementation detail not relevant for user documentation"
     }
   ]
 }

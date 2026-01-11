@@ -1619,24 +1619,18 @@ func clampHeadingLevel(level int) int {
 }
 
 func escapeMarkdown(text string) string {
-	// Basic markdown escaping for text content
-	// Escape characters that have special meaning in markdown
+	// Escape characters that have special meaning in Markdown
+	// Note: Periods and hyphens don't need escaping in normal text context
+	// They only have special meaning at start of line (lists) or in specific patterns
 	replacer := strings.NewReplacer(
 		"\\", "\\\\",
 		"`", "\\`",
 		"*", "\\*",
 		"_", "\\_",
-		"{", "\\{",
-		"}", "\\}",
 		"[", "\\[",
 		"]", "\\]",
-		"(", "\\(",
-		")", "\\)",
-		"#", "\\#",
-		"+", "\\+",
-		"-", "\\-",
-		".", "\\.",
-		"!", "\\!",
+		"<", "\\<",
+		">", "\\>",
 		"|", "\\|",
 	)
 	return replacer.Replace(text)

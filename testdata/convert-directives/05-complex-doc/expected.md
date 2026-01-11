@@ -1,14 +1,14 @@
 # Project Report
 
-This report summarizes the project status and key findings\.
+This report summarizes the project status and key findings.
 
 ## Metadata
 
 **Author**: Jane Smith
 
-**Date**: 2024\-01\-15
+**Date**: 2024-01-15
 
-**Version**: 1\.0
+**Version**: 1.0
 
 ## Key Findings
 
