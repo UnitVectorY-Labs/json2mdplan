@@ -1,11 +1,13 @@
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "title": "json2mdplan Plan v1",
-  "description": "A minimal plan that guides deterministic JSON-to-Markdown rendering (headings + paragraphs only).",
+  "description": "A directive-based plan that guides deterministic JSON-to-Markdown rendering through sequential execution of operators.",
   "properties": {
     "version": {
       "type": "integer",
-      "description": "Plan format version. Must be 1 for this schema."
+      "description": "Plan format version. Must be 1 for this schema.",
+      "const": 1
     },
     "schema_fingerprint": {
       "type": "object",
@@ -24,7 +26,8 @@
           "description": "Optional human hint, e.g. schema file name or identifier."
         }
       },
-      "required": ["sha256", "canonicalization"]
+      "required": ["sha256", "canonicalization"],
+      "additionalProperties": false
     },
     "settings": {
       "type": "object",
@@ -32,65 +35,261 @@
       "properties": {
         "base_heading_level": {
           "type": "integer",
-          "description": "Starting Markdown heading level at the document root. Typical value is 1."
+          "description": "Starting Markdown heading level at the document root. Typical value is 1.",
+          "minimum": 1,
+          "maximum": 6,
+          "default": 1
         },
-        "include_descriptions": {
-          "type": "boolean",
-          "description": "If true, include JSON Schema descriptions as paragraphs under headings."
-        },
-        "default_array_mode": {
+        "null_text": {
           "type": "string",
-          "description": "Default rendering for arrays when no override exists.",
-          "enum": ["objects_as_subsections", "scalars_as_paragraphs", "fallback_json"]
-        },
-        "fallback_mode": {
-          "type": "string",
-          "description": "How to render unsupported or ambiguous structures.",
-          "enum": ["json_code_block"]
+          "description": "Default text to display for null values.",
+          "default": "null"
         }
       },
-      "required": ["base_heading_level", "include_descriptions", "default_array_mode", "fallback_mode"]
+      "required": ["base_heading_level"],
+      "additionalProperties": false
     },
-    "overrides": {
+    "directives": {
       "type": "array",
-      "description": "Small set of path-based overrides. Keep this list minimal.",
+      "description": "Sequential list of directives to execute. Each directive emits zero or more lines of Markdown.",
       "items": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "JSON Pointer to the targeted node. Use \"\" for root, otherwise start with '/'."
-          },
-          "role": {
-            "type": "string",
-            "description": "Override role. The converter enforces role-specific requirements.",
-            "enum": [
-              "document_title",
-              "prominent_paragraph",
-              "section",
-              "object_order",
-              "array_section",
-              "suppress",
-              "render_as_json"
-            ]
-          },
-          "order": {
-            "type": "array",
-            "description": "For role=object_order. Property names to render first, in this order.",
-            "items": { "type": "string" }
-          },
-          "item_title_from": {
-            "type": "string",
-            "description": "For role=array_section. JSON Pointer relative to the array item object (example: '/name')."
-          },
-          "item_title_fallback": {
-            "type": "string",
-            "description": "For role=array_section. Fallback title. Only '{{index}}' template is supported."
-          }
-        },
-        "required": ["path", "role"]
+        "$ref": "#/$defs/directive"
       }
     }
   },
-  "required": ["version", "schema_fingerprint", "settings", "overrides"]
+  "required": ["version", "schema_fingerprint", "settings", "directives"],
+  "additionalProperties": false,
+  "$defs": {
+    "directive": {
+      "type": "object",
+      "oneOf": [
+        {"$ref": "#/$defs/heading"},
+        {"$ref": "#/$defs/blank_line"},
+        {"$ref": "#/$defs/text_line"},
+        {"$ref": "#/$defs/labeled_value_line"},
+        {"$ref": "#/$defs/for_each"},
+        {"$ref": "#/$defs/with_scope"},
+        {"$ref": "#/$defs/if_present"},
+        {"$ref": "#/$defs/bullet_list"},
+        {"$ref": "#/$defs/suppress"}
+      ]
+    },
+    "heading": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "heading"},
+        "id": {"type": "string", "description": "Optional identifier for debugging"},
+        "level": {"type": "integer", "minimum": 1, "maximum": 6, "description": "Absolute heading level (1-6)"},
+        "level_from_base": {"type": "integer", "description": "Heading level relative to base_heading_level"},
+        "text": {"$ref": "#/$defs/text_union"},
+        "when": {"$ref": "#/$defs/condition"}
+      },
+      "required": ["op", "text"],
+      "oneOf": [
+        {"required": ["level"]},
+        {"required": ["level_from_base"]}
+      ],
+      "additionalProperties": false
+    },
+    "blank_line": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "blank_line"},
+        "id": {"type": "string"},
+        "count": {"type": "integer", "minimum": 1, "default": 1},
+        "when": {"$ref": "#/$defs/condition"}
+      },
+      "required": ["op"],
+      "additionalProperties": false
+    },
+    "text_line": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "text_line"},
+        "id": {"type": "string"},
+        "text": {"$ref": "#/$defs/text_union"},
+        "escape": {"type": "boolean", "default": true, "description": "Whether to escape Markdown special characters"},
+        "style": {"enum": ["plain", "bold", "italic", "code_inline"], "default": "plain"},
+        "prefix": {"type": "string", "description": "Literal prefix (e.g., '- ' for bullets)"},
+        "suffix": {"type": "string", "description": "Literal suffix"},
+        "when": {"$ref": "#/$defs/condition"}
+      },
+      "required": ["op", "text"],
+      "additionalProperties": false
+    },
+    "labeled_value_line": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "labeled_value_line"},
+        "id": {"type": "string"},
+        "label": {"$ref": "#/$defs/text_union"},
+        "value": {"$ref": "#/$defs/value_reference"},
+        "label_style": {"enum": ["bold", "plain"], "default": "bold"},
+        "separator": {"type": "string", "default": ": "},
+        "value_format": {"$ref": "#/$defs/value_format"},
+        "skip_if_missing": {"type": "boolean", "default": true},
+        "when": {"$ref": "#/$defs/condition"}
+      },
+      "required": ["op", "label", "value"],
+      "additionalProperties": false
+    },
+    "for_each": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "for_each"},
+        "id": {"type": "string"},
+        "array": {"$ref": "#/$defs/value_reference"},
+        "as": {"type": "string", "description": "Optional name for the loop scope"},
+        "index_as": {"type": "string", "description": "Optional name for the index variable"},
+        "do": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/directive"},
+          "description": "Directives to execute for each item"
+        },
+        "between_items": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/directive"},
+          "description": "Directives to execute between items"
+        },
+        "when": {"$ref": "#/$defs/condition"}
+      },
+      "required": ["op", "array", "do"],
+      "additionalProperties": false
+    },
+    "with_scope": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "with_scope"},
+        "id": {"type": "string"},
+        "value": {"$ref": "#/$defs/value_reference"},
+        "as": {"type": "string", "description": "Optional name for the scope"},
+        "do": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/directive"},
+          "description": "Directives to execute in this scope"
+        },
+        "when": {"$ref": "#/$defs/condition"}
+      },
+      "required": ["op", "value", "do"],
+      "additionalProperties": false
+    },
+    "if_present": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "if_present"},
+        "id": {"type": "string"},
+        "value": {"$ref": "#/$defs/value_reference"},
+        "mode": {"enum": ["exists", "non_null", "non_empty"], "default": "non_null"},
+        "then": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/directive"}
+        },
+        "else": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/directive"}
+        }
+      },
+      "required": ["op", "value", "then"],
+      "additionalProperties": false
+    },
+    "bullet_list": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "bullet_list"},
+        "id": {"type": "string"},
+        "items": {"$ref": "#/$defs/value_reference"},
+        "item_format": {"$ref": "#/$defs/value_format"},
+        "item_text": {"$ref": "#/$defs/text_union", "description": "For array of objects, text to evaluate per item"},
+        "bullet": {"type": "string", "default": "- "},
+        "skip_empty": {"type": "boolean", "default": true},
+        "when": {"$ref": "#/$defs/condition"}
+      },
+      "required": ["op", "items"],
+      "oneOf": [
+        {"required": ["item_format"]},
+        {"required": ["item_text"]}
+      ],
+      "additionalProperties": false
+    },
+    "suppress": {
+      "type": "object",
+      "properties": {
+        "op": {"const": "suppress"},
+        "id": {"type": "string"},
+        "path": {"type": "string", "description": "JSON Pointer to suppress"},
+        "reason": {"type": "string", "description": "Optional explanation"}
+      },
+      "required": ["op", "path"],
+      "additionalProperties": false
+    },
+    "text_union": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "literal": {"type": "string"}
+          },
+          "required": ["literal"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {"$ref": "#/$defs/value_reference"}
+          },
+          "required": ["value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema_title": {
+              "type": "object",
+              "properties": {
+                "path": {"type": "string"},
+                "fallback": {"type": "string"}
+              },
+              "required": ["path"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["schema_title"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "concat": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/text_union"}
+            }
+          },
+          "required": ["concat"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "value_reference": {
+      "type": "object",
+      "properties": {
+        "path": {"type": "string", "description": "JSON Pointer path"},
+        "from": {"enum": ["root", "current"], "default": "root"}
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    },
+    "value_format": {
+      "enum": ["text", "number", "boolean", "date", "datetime", "json_compact"]
+    },
+    "condition": {
+      "type": "object",
+      "properties": {
+        "value": {"$ref": "#/$defs/value_reference"},
+        "test": {"enum": ["exists", "non_null", "non_empty", "equals_literal"]},
+        "literal": {"description": "Value for equals_literal test"}
+      },
+      "required": ["value", "test"],
+      "additionalProperties": false
+    }
+  }
 }
