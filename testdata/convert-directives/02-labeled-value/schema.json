@@ -1,8 +1,9 @@
 {
   "type": "object",
   "properties": {
-    "status": {"type": "string"},
-    "version": {"type": "string"},
-    "count": {"type": "integer"}
-  }
+    "status": {"type": "string", "title": "Status"},
+    "version": {"type": "string", "title": "Version"},
+    "count": {"type": "integer", "title": "Count"}
+  },
+  "required": ["status", "version", "count"]
 }

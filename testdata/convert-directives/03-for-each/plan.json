@@ -1,37 +1,59 @@
 {
-  "version": 1,
-  "schema_fingerprint": {
-    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "canonicalization": "json-canonical-v1"
-  },
+  "directives": [
+    {
+      "level_from_base": 0,
+      "op": "heading",
+      "text": {
+        "kind": "schema_title",
+        "schema_title": {
+          "fallback": "Items",
+          "path": "/items"
+        }
+      }
+    },
+    {
+      "op": "blank_line"
+    },
+    {
+      "array": {
+        "from": "root",
+        "path": "/items"
+      },
+      "do": [
+        {
+          "level_from_base": 1,
+          "op": "heading",
+          "text": {
+            "from": "current",
+            "kind": "value",
+            "value": "name"
+          }
+        },
+        {
+          "mode": "non_empty",
+          "op": "if_present",
+          "then": [
+            {
+              "from": "current",
+              "op": "text_line",
+              "text": "description"
+            },
+            {
+              "op": "blank_line"
+            }
+          ],
+          "value": {
+            "from": "current",
+            "path": "/description"
+          }
+        }
+      ],
+      "id": "render_items",
+      "op": "for_each"
+    }
+  ],
   "settings": {
     "base_heading_level": 1
   },
-  "directives": [
-    {
-      "op": "heading",
-      "level": 1,
-      "text": {"literal": "Items"}
-    },
-    {
-      "op": "for_each",
-      "array": {"path": "/items", "from": "root"},
-      "do": [
-        {
-          "op": "heading",
-          "level": 2,
-          "text": {"value": {"path": "/name", "from": "current"}}
-        },
-        {
-          "op": "text_line",
-          "text": {"value": {"path": "/description", "from": "current"}}
-        }
-      ],
-      "between_items": [
-        {
-          "op": "blank_line"
-        }
-      ]
-    }
-  ]
+  "version": 1
 }

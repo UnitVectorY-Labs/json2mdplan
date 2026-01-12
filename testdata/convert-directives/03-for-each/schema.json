@@ -3,13 +3,17 @@
   "properties": {
     "items": {
       "type": "array",
+      "title": "Items",
       "items": {
         "type": "object",
+        "title": "Item",
         "properties": {
-          "name": {"type": "string"},
-          "description": {"type": "string"}
-        }
+          "name": {"type": "string", "title": "Name"},
+          "description": {"type": "string", "title": "Description"}
+        },
+        "required": ["name"]
       }
     }
-  }
+  },
+  "required": ["items"]
 }

@@ -1,22 +1,48 @@
 {
-  "version": 1,
-  "schema_fingerprint": {
-    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "canonicalization": "json-canonical-v1"
-  },
+  "directives": [
+    {
+      "op": "if_present",
+      "value": {
+        "from": "root",
+        "path": "/highlights"
+      },
+      "when": {
+        "test": "non_empty",
+        "value": {
+          "from": "root",
+          "path": "/highlights"
+        }
+      }
+    },
+    {
+      "level_from_base": 0,
+      "op": "heading",
+      "text": {
+        "kind": "schema_title",
+        "schema_title": {
+          "fallback": "Highlights",
+          "path": "/highlights"
+        }
+      }
+    },
+    {
+      "items": {
+        "from": "root",
+        "path": "/highlights"
+      },
+      "op": "bullet_list",
+      "skip_empty": true,
+      "when": {
+        "test": "non_empty",
+        "value": {
+          "from": "root",
+          "path": "/highlights"
+        }
+      }
+    }
+  ],
   "settings": {
     "base_heading_level": 1
   },
-  "directives": [
-    {
-      "op": "heading",
-      "level": 1,
-      "text": {"literal": "Highlights"}
-    },
-    {
-      "op": "bullet_list",
-      "items": {"path": "/highlights", "from": "root"},
-      "item_format": "text"
-    }
-  ]
+  "version": 1
 }

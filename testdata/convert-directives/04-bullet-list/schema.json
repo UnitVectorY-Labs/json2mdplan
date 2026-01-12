@@ -3,7 +3,9 @@
   "properties": {
     "highlights": {
       "type": "array",
-      "items": {"type": "string"}
+      "title": "Highlights",
+      "items": {"type": "string", "title": "Highlight"}
     }
-  }
+  },
+  "required": ["highlights"]
 }

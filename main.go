@@ -27,6 +27,7 @@ import (
 var Version = "dev" // This will be set by the build system to the release version
 
 // Embedded files
+//
 //go:embed plan-schema.json
 var planSchemaJSON string
 
@@ -137,7 +138,7 @@ func defineFlags() {
 	flag.StringVar(&projectFlag, "project", "", "GCP project ID")
 	flag.StringVar(&locationFlag, "location", "", "GCP location/region")
 	flag.StringVar(&modelFlag, "model", "", "Gemini model identifier")
-	flag.IntVar(&timeout, "timeout", 60, "HTTP request timeout in seconds (default: 60)")
+	flag.IntVar(&timeout, "timeout", 300, "HTTP request timeout in seconds (default: 300)")
 
 	// Misc
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging to STDERR")
@@ -183,7 +184,7 @@ Usage:
     --out PATH              Write Markdown to file (default: STDOUT)
 
 Common options:
-  --timeout SECONDS         HTTP request timeout (default: 60, --plan mode only)
+  --timeout SECONDS         HTTP request timeout (default: 300, --plan mode only)
   --verbose                 Log diagnostics to STDERR
   --version                 Print version and exit
   --help                    Print help and exit
@@ -221,17 +222,17 @@ Example (convert mode):
 // ============================================================================
 
 type PlanConfig struct {
-	Schema          map[string]interface{}
-	SchemaBytes     []byte
-	SchemaSrc       string
-	CompiledSchema  *jsonschema.Schema
-	Project         string
-	Location        string
-	Model           string
-	Timeout         int
-	OutFile         string
-	Verbose         bool
-	PrettyPrint     bool
+	Schema           map[string]interface{}
+	SchemaBytes      []byte
+	SchemaSrc        string
+	CompiledSchema   *jsonschema.Schema
+	Project          string
+	Location         string
+	Model            string
+	Timeout          int
+	OutFile          string
+	Verbose          bool
+	PrettyPrint      bool
 	SchemaSourceHint string
 }
 
@@ -268,13 +269,6 @@ func runPlanMode() error {
 	var plan map[string]interface{}
 	if err := json.Unmarshal([]byte(responseJSON), &plan); err != nil {
 		return &validationError{fmt.Sprintf("LLM response is not valid JSON: %v", err)}
-	}
-
-	// Update fingerprint in the plan (LLM may not have it correct)
-	plan["schema_fingerprint"] = map[string]interface{}{
-		"sha256":          fingerprint,
-		"canonicalization": "json-canonical-v1",
-		"source_hint":     config.SchemaSourceHint,
 	}
 
 	// Ensure version is set
@@ -606,13 +600,7 @@ func buildPlanRequest(config *PlanConfig, digest *SchemaDigest, fingerprint stri
 		return nil, &inputError{fmt.Sprintf("failed to marshal schema digest: %v", err)}
 	}
 
-	userPrompt := fmt.Sprintf(`Here is the Schema Digest for which you need to generate a plan:
-
-%s
-
-The schema fingerprint is: %s
-
-Generate a Plan JSON that will guide deterministic JSON-to-Markdown conversion for documents conforming to this schema.`, string(digestBytes), fingerprint)
+	userPrompt := string(digestBytes)
 
 	// Parse plan schema for response constraint
 	var planSchema map[string]interface{}
@@ -800,6 +788,13 @@ func validatePlan(plan map[string]interface{}) error {
 	}
 
 	if err := compiledSchema.Validate(planObj); err != nil {
+		// Print the plan JSON to STDERR to aid debugging of validation errors.
+		var pretty bytes.Buffer
+		if jerr := json.Indent(&pretty, planBytes, "", "  "); jerr == nil {
+			fmt.Fprintf(os.Stderr, "Plan JSON (for debugging):\n%s\n", pretty.String())
+		} else {
+			fmt.Fprintf(os.Stderr, "Plan JSON (raw):\n%s\n", string(planBytes))
+		}
 		return &validationError{fmt.Sprintf("plan validation failed: %v", err)}
 	}
 
@@ -811,30 +806,23 @@ func validatePlan(plan map[string]interface{}) error {
 // ============================================================================
 
 type ConvertConfig struct {
-	JSONInstance    interface{}
-	JSONBytes       []byte
-	JSONSrc         string
-	Schema          map[string]interface{}
-	SchemaBytes     []byte
-	SchemaSrc       string
-	Plan            *Plan
-	PlanBytes       []byte
-	PlanSrc         string
-	OutFile         string
-	Verbose         bool
+	JSONInstance interface{}
+	JSONBytes    []byte
+	JSONSrc      string
+	Schema       map[string]interface{}
+	SchemaBytes  []byte
+	SchemaSrc    string
+	Plan         *Plan
+	PlanBytes    []byte
+	PlanSrc      string
+	OutFile      string
+	Verbose      bool
 }
 
 type Plan struct {
-	Version           int               `json:"version"`
-	SchemaFingerprint SchemaFingerprint `json:"schema_fingerprint"`
-	Settings          PlanSettings      `json:"settings"`
-	Directives        []Directive       `json:"directives"`
-}
-
-type SchemaFingerprint struct {
-	SHA256           string `json:"sha256"`
-	Canonicalization string `json:"canonicalization"`
-	SourceHint       string `json:"source_hint,omitempty"`
+	Version    int          `json:"version"`
+	Settings   PlanSettings `json:"settings"`
+	Directives []Directive  `json:"directives"`
 }
 
 type PlanSettings struct {
@@ -853,21 +841,6 @@ func runConvertMode() error {
 	// Validate JSON instance against schema
 	if err := validateJSONAgainstSchema(config); err != nil {
 		return err
-	}
-
-	// Verify plan-schema compatibility
-	schemaFingerprint := calculateFingerprint(config.SchemaBytes)
-	if config.Plan.SchemaFingerprint.SHA256 != schemaFingerprint {
-		if config.Verbose {
-			fmt.Fprintf(os.Stderr, "Warning: schema fingerprint mismatch\n")
-			fmt.Fprintf(os.Stderr, "  Plan fingerprint: %s\n", config.Plan.SchemaFingerprint.SHA256)
-			fmt.Fprintf(os.Stderr, "  Schema fingerprint: %s\n", schemaFingerprint)
-		}
-		return &validationError{"plan-schema fingerprint mismatch: the plan was generated for a different schema"}
-	}
-
-	if config.Verbose {
-		fmt.Fprintf(os.Stderr, "Schema fingerprint verified: %s\n", schemaFingerprint)
 	}
 
 	// Convert to Markdown
@@ -1008,6 +981,13 @@ func loadConvertConfiguration() (*ConvertConfig, error) {
 	}
 
 	if err := compiledPlanSchema.Validate(planObj); err != nil {
+		// Print the plan JSON to STDERR for easier debugging when an invalid plan is provided.
+		var pretty bytes.Buffer
+		if jerr := json.Indent(&pretty, planBytes, "", "  "); jerr == nil {
+			fmt.Fprintf(os.Stderr, "Plan JSON (for debugging):\n%s\n", pretty.String())
+		} else {
+			fmt.Fprintf(os.Stderr, "Plan JSON (raw):\n%s\n", string(planBytes))
+		}
 		return nil, &validationError{fmt.Sprintf("plan validation failed: %v", err)}
 	}
 
@@ -1048,22 +1028,22 @@ func validateJSONAgainstSchema(config *ConvertConfig) error {
 // ============================================================================
 
 type DirectiveInterpreter struct {
-	config      *ConvertConfig
+	config       *ConvertConfig
 	schemaDigest *SchemaDigest
-	output      strings.Builder
-	scopeStack  []interface{}
-	suppressed  map[string]bool
+	output       strings.Builder
+	scopeStack   []interface{}
+	suppressed   map[string]bool
 }
 
 func convertToMarkdown(config *ConvertConfig) string {
 	// Generate schema digest for schema title lookups
 	digest := generateSchemaDigest(config.Schema)
-	
+
 	interpreter := &DirectiveInterpreter{
-		config:      config,
+		config:       config,
 		schemaDigest: digest,
-		scopeStack:  []interface{}{config.JSONInstance},
-		suppressed:  make(map[string]bool),
+		scopeStack:   []interface{}{config.JSONInstance},
+		suppressed:   make(map[string]bool),
 	}
 
 	// Execute directives
@@ -1166,7 +1146,7 @@ func (interp *DirectiveInterpreter) execTextLine(directive Directive) {
 	if esc, ok := directive["escape"].(bool); ok {
 		escape = esc
 	}
-	
+
 	if escape {
 		text = escapeMarkdown(text)
 	}
@@ -1218,7 +1198,7 @@ func (interp *DirectiveInterpreter) execLabeledValueLine(directive Directive) {
 	}
 
 	valueStr := interp.formatValue(value, valueFormat)
-	
+
 	line := label + separator + escapeMarkdown(valueStr)
 	interp.output.WriteString(line)
 	interp.output.WriteString("\n\n")
@@ -1351,12 +1331,12 @@ func (interp *DirectiveInterpreter) execBulletList(directive Directive) {
 		for _, item := range items {
 			// Push item scope
 			interp.scopeStack = append(interp.scopeStack, item)
-			
+
 			text := interp.resolveTextUnion(itemText)
-			
+
 			// Pop scope
 			interp.scopeStack = interp.scopeStack[:len(interp.scopeStack)-1]
-			
+
 			if skipEmpty && text == "" {
 				continue
 			}
@@ -1398,7 +1378,7 @@ func (interp *DirectiveInterpreter) resolveTextUnion(textUnion interface{}) stri
 	if schemaTitle, ok := tu["schema_title"].(map[string]interface{}); ok {
 		path, _ := schemaTitle["path"].(string)
 		fallback, _ := schemaTitle["fallback"].(string)
-		
+
 		// Look up in schema digest
 		for _, entry := range interp.schemaDigest.PathIndex {
 			if entry.Path == path && entry.Title != "" {
@@ -1545,7 +1525,7 @@ func (interp *DirectiveInterpreter) evaluateCondition(when interface{}) bool {
 	}
 
 	value := interp.resolveValueReference(valueRef)
-	
+
 	test, ok := cond["test"].(string)
 	if !ok {
 		return true
