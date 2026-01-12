@@ -12,67 +12,6 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
-// TestConvert runs data-driven tests for the convert functionality.
-// Each subdirectory in testdata/convert/ represents a test case with:
-//   - instance.json: the JSON instance to convert
-//   - schema.json: the JSON Schema
-//   - plan.json: the plan file
-//   - expected.md: the expected Markdown output
-func TestConvert(t *testing.T) {
-	testdataDir := "testdata/convert"
-	
-	entries, err := os.ReadDir(testdataDir)
-	if err != nil {
-		t.Fatalf("failed to read testdata directory: %v", err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		testName := entry.Name()
-		testDir := filepath.Join(testdataDir, testName)
-
-		t.Run(testName, func(t *testing.T) {
-			// Read test files
-			instanceBytes, err := os.ReadFile(filepath.Join(testDir, "instance.json"))
-			if err != nil {
-				t.Fatalf("failed to read instance.json: %v", err)
-			}
-
-			schemaBytes, err := os.ReadFile(filepath.Join(testDir, "schema.json"))
-			if err != nil {
-				t.Fatalf("failed to read schema.json: %v", err)
-			}
-
-			planBytes, err := os.ReadFile(filepath.Join(testDir, "plan.json"))
-			if err != nil {
-				t.Fatalf("failed to read plan.json: %v", err)
-			}
-
-			expectedBytes, err := os.ReadFile(filepath.Join(testDir, "expected.md"))
-			if err != nil {
-				t.Fatalf("failed to read expected.md: %v", err)
-			}
-
-			// Run conversion
-			actual, err := runConversion(instanceBytes, schemaBytes, planBytes)
-			if err != nil {
-				t.Fatalf("conversion failed: %v", err)
-			}
-
-			expected := strings.TrimSpace(string(expectedBytes))
-			actual = strings.TrimSpace(actual)
-
-			if actual != expected {
-				t.Errorf("output mismatch\n\nExpected:\n%s\n\nActual:\n%s\n\nDiff:\n%s", 
-					expected, actual, diff(expected, actual))
-			}
-		})
-	}
-}
-
 // TestConvertDirectives runs data-driven tests for the directive-based convert functionality.
 // Each subdirectory in testdata/convert-directives/ represents a test case with:
 //   - instance.json: the JSON instance to convert
@@ -81,7 +20,7 @@ func TestConvert(t *testing.T) {
 //   - expected.md: the expected Markdown output
 func TestConvertDirectives(t *testing.T) {
 	testdataDir := "testdata/convert-directives"
-	
+
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
 		t.Fatalf("failed to read testdata directory: %v", err)
@@ -127,7 +66,7 @@ func TestConvertDirectives(t *testing.T) {
 			actual = strings.TrimSpace(actual)
 
 			if actual != expected {
-				t.Errorf("output mismatch\n\nExpected:\n%s\n\nActual:\n%s\n\nDiff:\n%s", 
+				t.Errorf("output mismatch\n\nExpected:\n%s\n\nActual:\n%s\n\nDiff:\n%s",
 					expected, actual, diff(expected, actual))
 			}
 		})
@@ -302,10 +241,10 @@ func validatePlanBytes(planBytes []byte) error {
 // TestSchemaDigest tests the schema digest generation
 func TestSchemaDigest(t *testing.T) {
 	testCases := []struct {
-		name           string
-		schema         string
-		expectedPaths  int
-		expectedRoot   string
+		name          string
+		schema        string
+		expectedPaths int
+		expectedRoot  string
 	}{
 		{
 			name: "simple-object",

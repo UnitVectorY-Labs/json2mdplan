@@ -3,6 +3,7 @@ layout: default
 title: heading
 parent: Directive Operators
 nav_order: 1
+permalink: /operators/heading/
 ---
 
 # heading Operator

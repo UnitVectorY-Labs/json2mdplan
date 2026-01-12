@@ -3,6 +3,7 @@ layout: default
 title: blank_line
 parent: Directive Operators
 nav_order: 2
+permalink: /operators/blank_line/
 ---
 
 # blank_line Operator

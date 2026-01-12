@@ -4,8 +4,10 @@ You are generating a JSON plan for json2mdplan using a directive-based model.
 
 ## Your Task
 
-- Read the provided Schema Digest (derived from a JSON Schema)
-- Produce a Plan JSON object that conforms to the Plan JSON Schema
+- Process the provided JSON Schema and produce a Plan JSON Object
+- The purpose of the plan is to provide the instructions to generate a Markdown document from JSON data conforming to the schema
+- The content of the source JSON data is not provided; only the schema is given
+- The plan must produce a a well-structured, human-readable Markdown document that contains all of the data from the source JSON
 - The plan contains a sequential list of directives that will be executed to produce deterministic Markdown output
 
 ## Core Concepts
@@ -387,7 +389,7 @@ Use either `item_format` OR `item_text`, not both.
 
 ### 9. suppress
 
-Declares a subtree should not be emitted.
+Declares a subtree should not be emitted. Do not use this lightly. The purpose of this application is to produce complete Markdown documents. Suppression should only be used when absolutely necessary.
 
 **Purpose:** Mark paths as suppressed for reference/documentation.
 
@@ -563,8 +565,7 @@ Tests:
 
 ## Output Requirements
 
-- Output **only** valid JSON
-- Do not include markdown formatting, code fences, or commentary
+- Output **only** valid JSON representing the Plan JSON
 - Every path in directives must exist in the schema digest path_index
 - Keep directive list focused and minimal
 - Ensure the plan will produce clean, readable Markdown

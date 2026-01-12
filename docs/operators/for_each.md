@@ -3,6 +3,7 @@ layout: default
 title: for_each
 parent: Directive Operators
 nav_order: 5
+permalink: /operators/for_each/
 ---
 
 # for_each Operator

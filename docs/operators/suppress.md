@@ -3,6 +3,7 @@ layout: default
 title: suppress
 parent: Directive Operators
 nav_order: 9
+permalink: /operators/suppress/
 ---
 
 # suppress Operator

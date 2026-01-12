@@ -3,6 +3,7 @@ layout: default
 title: with_scope
 parent: Directive Operators
 nav_order: 6
+permalink: /operators/with_scope/
 ---
 
 # with_scope Operator

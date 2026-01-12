@@ -3,6 +3,7 @@ layout: default
 title: labeled_value_line
 parent: Directive Operators
 nav_order: 4
+permalink: /operators/labeled_value_line/
 ---
 
 # labeled_value_line Operator

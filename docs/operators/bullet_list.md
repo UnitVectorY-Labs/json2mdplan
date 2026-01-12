@@ -3,6 +3,7 @@ layout: default
 title: bullet_list
 parent: Directive Operators
 nav_order: 8
+permalink: /operators/bullet_list/
 ---
 
 # bullet_list Operator

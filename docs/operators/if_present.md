@@ -3,6 +3,7 @@ layout: default
 title: if_present
 parent: Directive Operators
 nav_order: 7
+permalink: /operators/if_present/
 ---
 
 # if_present Operator

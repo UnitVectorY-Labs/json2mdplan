@@ -3,6 +3,7 @@ layout: default
 title: text_line
 parent: Directive Operators
 nav_order: 3
+permalink: /operators/text_line/
 ---
 
 # text_line Operator
