@@ -1,9 +1,5 @@
 {
   "version": 1,
-  "schema_fingerprint": {
-    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "canonicalization": "json-canonical-v1"
-  },
   "settings": {
     "base_heading_level": 1
   },
@@ -11,16 +7,16 @@
     {
       "op": "heading",
       "level": 1,
-      "text": {"value": {"path": "/title", "from": "root"}}
+      "text": {"kind": "value", "value": {"path": "/title", "from": "root"}}
     },
     {
       "op": "text_line",
-      "text": {"value": {"path": "/summary", "from": "root"}}
+      "text": {"kind": "value", "value": {"path": "/summary", "from": "root"}}
     },
     {
       "op": "heading",
       "level": 2,
-      "text": {"literal": "Metadata"}
+      "text": {"kind": "literal", "literal": "Metadata"}
     },
     {
       "op": "with_scope",
@@ -28,17 +24,17 @@
       "do": [
         {
           "op": "labeled_value_line",
-          "label": {"literal": "Author"},
+          "label": {"kind": "literal", "literal": "Author"},
           "value": {"path": "/author", "from": "current"}
         },
         {
           "op": "labeled_value_line",
-          "label": {"literal": "Date"},
+          "label": {"kind": "literal", "literal": "Date"},
           "value": {"path": "/date", "from": "current"}
         },
         {
           "op": "labeled_value_line",
-          "label": {"literal": "Version"},
+          "label": {"kind": "literal", "literal": "Version"},
           "value": {"path": "/version", "from": "current"}
         }
       ]
@@ -46,7 +42,7 @@
     {
       "op": "heading",
       "level": 2,
-      "text": {"literal": "Key Findings"}
+      "text": {"kind": "literal", "literal": "Key Findings"}
     },
     {
       "op": "bullet_list",
@@ -56,7 +52,7 @@
     {
       "op": "heading",
       "level": 2,
-      "text": {"literal": "Recommendations"}
+      "text": {"kind": "literal", "literal": "Recommendations"}
     },
     {
       "op": "for_each",
@@ -66,16 +62,17 @@
           "op": "heading",
           "level": 3,
           "text": {
+            "kind": "concat",
             "concat": [
-              {"value": {"path": "/id", "from": "current"}},
-              {"literal": ": "},
-              {"value": {"path": "/title", "from": "current"}}
+              {"kind": "value", "value": {"path": "/id", "from": "current"}},
+              {"kind": "literal", "literal": ": "},
+              {"kind": "value", "value": {"path": "/title", "from": "current"}}
             ]
           }
         },
         {
           "op": "labeled_value_line",
-          "label": {"literal": "Priority"},
+          "label": {"kind": "literal", "literal": "Priority"},
           "value": {"path": "/priority", "from": "current"}
         }
       ]

@@ -120,10 +120,6 @@ Test modes:
 ```json
 {
   "version": 1,
-  "schema_fingerprint": {
-    "sha256": "abc...",
-    "canonicalization": "json-canonical-v1"
-  },
   "settings": {
     "base_heading_level": 1
   },

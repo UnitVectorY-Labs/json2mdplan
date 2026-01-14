@@ -90,7 +90,6 @@ The `json2mdplan` CLI follows standard UNIX conventions for input and output.
 The generated plan follows a strict JSON Schema that defines:
 
 - `version`: Plan format version (must be 1)
-- `schema_fingerprint`: SHA-256 hash of the canonicalized schema for compatibility verification
 - `settings`: Global rendering settings (base heading level, include descriptions, array mode, fallback mode)
 - `overrides`: Path-based rendering overrides
 

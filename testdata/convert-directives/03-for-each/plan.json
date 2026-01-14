@@ -24,9 +24,11 @@
           "level_from_base": 1,
           "op": "heading",
           "text": {
-            "from": "current",
             "kind": "value",
-            "value": "name"
+            "value": {
+              "from": "current",
+              "path": "/name"
+            }
           }
         },
         {
@@ -34,9 +36,14 @@
           "op": "if_present",
           "then": [
             {
-              "from": "current",
               "op": "text_line",
-              "text": "description"
+              "text": {
+                "kind": "value",
+                "value": {
+                  "from": "current",
+                  "path": "/description"
+                }
+              }
             },
             {
               "op": "blank_line"
