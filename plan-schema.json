@@ -1,96 +1,195 @@
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "json2mdplan Gemini Plan (generation schema)",
   "type": "object",
-  "title": "json2mdplan Plan v1",
-  "description": "A minimal plan that guides deterministic JSON-to-Markdown rendering (headings + paragraphs only).",
+  "additionalProperties": false,
+  "required": ["version", "settings", "directives"],
   "properties": {
-    "version": {
-      "type": "integer",
-      "description": "Plan format version. Must be 1 for this schema."
-    },
-    "schema_fingerprint": {
-      "type": "object",
-      "description": "Fingerprint of the JSON Schema used to generate this plan. Used to enforce strict compatibility.",
-      "properties": {
-        "sha256": {
-          "type": "string",
-          "description": "SHA-256 hash of the canonicalized, resolved schema."
-        },
-        "canonicalization": {
-          "type": "string",
-          "description": "Name of the canonicalization algorithm used prior to hashing."
-        },
-        "source_hint": {
-          "type": "string",
-          "description": "Optional human hint, e.g. schema file name or identifier."
-        }
-      },
-      "required": ["sha256", "canonicalization"]
-    },
+    "version": { "type": "integer", "enum": [1], "description": "Must be 1." },
     "settings": {
       "type": "object",
-      "description": "Global rendering settings.",
+      "additionalProperties": false,
+      "required": ["base_heading_level"],
       "properties": {
-        "base_heading_level": {
-          "type": "integer",
-          "description": "Starting Markdown heading level at the document root. Typical value is 1."
-        },
-        "include_descriptions": {
-          "type": "boolean",
-          "description": "If true, include JSON Schema descriptions as paragraphs under headings."
-        },
-        "default_array_mode": {
-          "type": "string",
-          "description": "Default rendering for arrays when no override exists.",
-          "enum": ["objects_as_subsections", "scalars_as_paragraphs", "fallback_json"]
-        },
-        "fallback_mode": {
-          "type": "string",
-          "description": "How to render unsupported or ambiguous structures.",
-          "enum": ["json_code_block"]
-        }
-      },
-      "required": ["base_heading_level", "include_descriptions", "default_array_mode", "fallback_mode"]
+        "base_heading_level": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "null_text": { "type": "string" }
+      }
     },
-    "overrides": {
+    "directives": {
       "type": "array",
-      "description": "Small set of path-based overrides. Keep this list minimal.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "JSON Pointer to the targeted node. Use \"\" for root, otherwise start with '/'."
-          },
-          "role": {
-            "type": "string",
-            "description": "Override role. The converter enforces role-specific requirements.",
-            "enum": [
-              "document_title",
-              "prominent_paragraph",
-              "section",
-              "object_order",
-              "array_section",
-              "suppress",
-              "render_as_json"
-            ]
-          },
-          "order": {
-            "type": "array",
-            "description": "For role=object_order. Property names to render first, in this order.",
-            "items": { "type": "string" }
-          },
-          "item_title_from": {
-            "type": "string",
-            "description": "For role=array_section. JSON Pointer relative to the array item object (example: '/name')."
-          },
-          "item_title_fallback": {
-            "type": "string",
-            "description": "For role=array_section. Fallback title. Only '{{index}}' template is supported."
+      "items": { "type": "object", "additionalProperties": false, "required": ["op"], "properties": {
+        "op": {
+          "type": "string",
+          "enum": [
+            "heading",
+            "blank_line",
+            "text_line",
+            "labeled_value_line",
+            "for_each",
+            "with_scope",
+            "if_present",
+            "bullet_list",
+            "suppress"
+          ]
+        },
+        "id": { "type": "string" },
+
+        "when": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "test"],
+          "properties": {
+            "value": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path"],
+              "properties": {
+                "path": { "type": "string", "description": "JSON Pointer" },
+                "from": { "type": "string", "enum": ["root", "current"] }
+              }
+            },
+            "test": { "type": "string", "enum": ["exists", "non_null", "non_empty", "equals_literal"] },
+            "literal": {
+              "type": ["string", "number", "integer", "boolean", "null"],
+              "description": "Only used when test=equals_literal"
+            }
           }
         },
-        "required": ["path", "role"]
-      }
+
+        "level": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Required when op=heading (use level or level_from_base)" },
+        "level_from_base": { "type": "integer", "description": "Required when op=heading (use level or level_from_base)" },
+        "text": { "$comment": "TextUnion", "type": "object", "additionalProperties": false, "required": ["kind"], "properties": {
+          "kind": { "type": "string", "enum": ["literal", "value", "schema_title", "concat"] },
+
+          "literal": { "type": "string", "description": "Used when kind=literal" },
+
+          "value": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "from": { "type": "string", "enum": ["root", "current"] }
+            },
+            "description": "Used when kind=value"
+          },
+
+          "schema_title": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "fallback": { "type": "string" }
+            },
+            "description": "Used when kind=schema_title"
+          },
+
+          "concat": {
+            "type": "array",
+            "items": { "$comment": "TextUnion", "type": "object", "additionalProperties": false, "required": ["kind"], "properties": {
+              "kind": { "type": "string", "enum": ["literal", "value", "schema_title", "concat"] },
+              "literal": { "type": "string" },
+              "value": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path"],
+                "properties": {
+                  "path": { "type": "string" },
+                  "from": { "type": "string", "enum": ["root", "current"] }
+                }
+              },
+              "schema_title": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path"],
+                "properties": {
+                  "path": { "type": "string" },
+                  "fallback": { "type": "string" }
+                }
+              },
+              "concat": { "type": "array", "items": { "type": "object" } }
+            } }
+          }
+        }, "description": "Required when op=heading or op=text_line, etc." },
+
+        "count": { "type": "integer", "minimum": 1, "description": "Used when op=blank_line" },
+
+        "escape": { "type": "boolean", "description": "Used when op=text_line" },
+        "style": { "type": "string", "enum": ["plain", "bold", "italic", "code_inline"], "description": "Used when op=text_line" },
+        "prefix": { "type": "string", "description": "Used when op=text_line" },
+        "suffix": { "type": "string", "description": "Used when op=text_line" },
+
+        "label": { "$comment": "TextUnion", "type": "object", "additionalProperties": false, "required": ["kind"], "properties": {
+          "kind": { "type": "string", "enum": ["literal", "value", "schema_title", "concat"] },
+          "literal": { "type": "string" },
+          "value": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": { "path": { "type": "string" }, "from": { "type": "string", "enum": ["root", "current"] } }
+          },
+          "schema_title": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": { "path": { "type": "string" }, "fallback": { "type": "string" } }
+          },
+          "concat": { "type": "array", "items": { "type": "object" } }
+        }, "description": "Used when op=labeled_value_line" },
+
+        "value": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": {
+            "path": { "type": "string" },
+            "from": { "type": "string", "enum": ["root", "current"] }
+          },
+          "description": "Used when op=labeled_value_line or op=if_present or op=with_scope"
+        },
+
+        "label_style": { "type": "string", "enum": ["bold", "plain"] },
+        "separator": { "type": "string" },
+        "value_format": { "type": "string", "enum": ["text", "number", "boolean", "date", "datetime", "json_compact"] },
+        "skip_if_missing": { "type": "boolean" },
+
+        "array": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": {
+            "path": { "type": "string" },
+            "from": { "type": "string", "enum": ["root", "current"] }
+          },
+          "description": "Used when op=for_each"
+        },
+
+        "do": { "type": "array", "items": { "type": "object" }, "description": "Used when op=for_each or op=with_scope" },
+        "between_items": { "type": "array", "items": { "type": "object" }, "description": "Used when op=for_each" },
+
+        "mode": { "type": "string", "enum": ["exists", "non_null", "non_empty"], "description": "Used when op=if_present" },
+        "then": { "type": "array", "items": { "type": "object" }, "description": "Used when op=if_present" },
+        "else": { "type": "array", "items": { "type": "object" }, "description": "Used when op=if_present" },
+
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": {
+            "path": { "type": "string" },
+            "from": { "type": "string", "enum": ["root", "current"] }
+          },
+          "description": "Used when op=bullet_list"
+        },
+        "item_format": { "type": "string", "enum": ["text", "number", "boolean", "date", "datetime", "json_compact"] },
+        "item_text": { "$comment": "TextUnion", "type": "object" },
+        "bullet": { "type": "string" },
+        "skip_empty": { "type": "boolean" },
+
+        "path": { "type": "string", "description": "Used when op=suppress" },
+        "reason": { "type": "string" }
+      } }
     }
-  },
-  "required": ["version", "schema_fingerprint", "settings", "overrides"]
+  }
 }
