@@ -1,0 +1,62 @@
+{
+  "directives": [
+    {
+      "level": 1,
+      "op": "heading",
+      "text": {
+        "kind": "literal",
+        "literal": "System Status Report"
+      }
+    },
+    {
+      "op": "blank_line"
+    },
+    {
+      "label": {
+        "kind": "schema_title",
+        "schema_title": {
+          "fallback": "Version",
+          "path": "/version"
+        }
+      },
+      "op": "labeled_value_line",
+      "value": {
+        "from": "root",
+        "path": "/version"
+      }
+    },
+    {
+      "label": {
+        "kind": "schema_title",
+        "schema_title": {
+          "fallback": "Status",
+          "path": "/status"
+        }
+      },
+      "op": "labeled_value_line",
+      "value": {
+        "from": "root",
+        "path": "/status"
+      }
+    },
+    {
+      "label": {
+        "kind": "schema_title",
+        "schema_title": {
+          "fallback": "Count",
+          "path": "/count"
+        }
+      },
+      "op": "labeled_value_line",
+      "value": {
+        "from": "root",
+        "path": "/count"
+      }
+    }
+  ],
+  "settings": {
+    "base_heading_level": 1,
+    "null_text": "N/A"
+  },
+  "version": 1
+}

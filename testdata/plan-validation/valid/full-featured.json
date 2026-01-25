@@ -1,47 +1,69 @@
 {
   "version": 1,
-  "schema_fingerprint": {
-    "sha256": "abc123def456",
-    "canonicalization": "json-canonical-v1",
-    "source_hint": "example.schema.json"
-  },
   "settings": {
     "base_heading_level": 2,
-    "include_descriptions": false,
-    "default_array_mode": "scalars_as_paragraphs",
-    "fallback_mode": "json_code_block"
+    "null_text": "N/A"
   },
-  "overrides": [
+  "directives": [
     {
-      "path": "/title",
-      "role": "document_title"
+      "op": "heading",
+      "level": 1,
+      "text": {"kind": "literal", "literal": "Document Title"}
     },
     {
-      "path": "/description",
-      "role": "prominent_paragraph"
+      "op": "text_line",
+      "text": {"kind": "literal", "literal": "Introduction paragraph"}
     },
     {
-      "path": "",
-      "role": "object_order",
-      "order": ["title", "description", "content"]
+      "op": "blank_line"
     },
     {
-      "path": "/items",
-      "role": "array_section",
-      "item_title_from": "/name",
-      "item_title_fallback": "Item {{index}}"
+      "op": "labeled_value_line",
+      "label": {"kind": "literal", "literal": "Status"},
+      "value": {"path": "/status", "from": "root"}
     },
     {
+      "op": "for_each",
+      "array": {"path": "/items", "from": "root"},
+      "do": [
+        {
+          "op": "heading",
+          "level": 2,
+          "text": {"kind": "value", "value": {"path": "/name", "from": "current"}}
+        }
+      ]
+    },
+    {
+      "op": "bullet_list",
+      "items": {"path": "/highlights", "from": "root"},
+      "item_format": "text"
+    },
+    {
+      "op": "if_present",
+      "value": {"path": "/optional", "from": "root"},
+      "mode": "non_null",
+      "then": [
+        {
+          "op": "text_line",
+          "text": {"kind": "value", "value": {"path": "/optional", "from": "root"}}
+        }
+      ]
+    },
+    {
+      "op": "with_scope",
+      "value": {"path": "/metadata", "from": "root"},
+      "do": [
+        {
+          "op": "labeled_value_line",
+          "label": {"kind": "literal", "literal": "Author"},
+          "value": {"path": "/author", "from": "current"}
+        }
+      ]
+    },
+    {
+      "op": "suppress",
       "path": "/internal",
-      "role": "suppress"
-    },
-    {
-      "path": "/complex",
-      "role": "render_as_json"
-    },
-    {
-      "path": "/main",
-      "role": "section"
+      "reason": "Internal implementation detail not relevant for user documentation"
     }
   ]
 }
