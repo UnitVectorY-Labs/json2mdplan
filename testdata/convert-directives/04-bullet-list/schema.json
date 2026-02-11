@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "highlights": {
+      "type": "array",
+      "title": "Highlights",
+      "items": {"type": "string", "title": "Highlight"}
+    }
+  },
+  "required": ["highlights"]
+}
