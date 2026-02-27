@@ -1,18 +1,17 @@
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![Concept](https://img.shields.io/badge/Status-Concept-white)](https://guide.unitvectorylabs.com/bestpractices/status/#concept)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 # json2mdplan
 
-Unix-style CLI that extracts structure-only JSON, uses Vertex AI (Gemini) structured outputs to generate a schema-validated Markdown plan, then renders Markdown locally from the original JSON without sending raw values to the model.
+CLI tool that converts JSON files to Markdown using customizable, tree-based templates.
 
 ## Overview
 
-`json2mdplan` is designed for converting JSON documents to human-readable Markdown:
+`json2mdplan` converts arbitrary JSON data to well-structured Markdown documents. It uses a template language that mirrors the shape of your JSON data, giving you control over how each field is rendered.
 
-- Generate a rendering plan from a JSON Schema using Gemini, keeping your raw data private
-- Convert JSON instances to Markdown deterministically without any LLM calls
-- Enforce output structure using a validated Plan JSON Schema
-- Enable repeatable, inspectable document generation from the command line
-- Support shell pipelines, scripts, and batch processing workflows
+- **Generate templates** automatically from any JSON file
+- **Convert JSON to Markdown** deterministically using templates
+- **Pipe-friendly** — reads from STDIN, writes to STDOUT
+- **LLM-refinable** — templates are simple JSON that LLMs can improve
 
 ## Installation
 
@@ -28,128 +27,114 @@ cd json2mdplan
 go build -o json2mdplan
 ```
 
-## Examples
+## Usage
 
-### Generate a Plan from Schema
+The tool has two mutually exclusive modes:
 
-Generate a rendering plan from a JSON Schema using Gemini:
+### Generate a Template
+
+Create a template from a JSON file:
 
 ```bash
-json2mdplan --plan \
-    --schema-file schema.json \
-    --project my-project \
-    --location us-central1 \
-    --model gemini-2.5-flash \
-    --out plan.json
+json2mdplan --generate --input data.json --pretty
+```
+
+Or from STDIN:
+
+```bash
+cat data.json | json2mdplan --generate --pretty
 ```
 
 ### Convert JSON to Markdown
 
-Convert a JSON instance to Markdown using the schema and plan (no LLM required):
+Convert a JSON file to Markdown using a template:
 
 ```bash
-json2mdplan --convert \
-    --json-file data.json \
-    --schema-file schema.json \
-    --plan-file plan.json \
-    --out output.md
+json2mdplan --convert --input data.json --template template.json
 ```
 
-## Usage
-
-The `json2mdplan` application has two mutually exclusive modes:
-
-- `--plan`: Generate a Plan JSON from a JSON Schema using Gemini on Vertex AI
-- `--convert`: Convert a JSON instance to Markdown using a schema and plan (no LLM required)
-
-### Authentication
-
-`json2mdplan` uses Google Application Default Credentials for the `--plan` mode.
-
-Authenticate locally with:
+Pipeline usage:
 
 ```bash
-gcloud auth application-default login
+cat data.json | json2mdplan --convert --template template.json > output.md
 ```
 
-Or via service account:
+### Options
 
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-```
+| Flag | Description |
+|---|---|
+| `--generate` | Generate a template from JSON input |
+| `--convert` | Convert JSON to Markdown using a template |
+| `--input` | Input JSON file (default: STDIN) |
+| `--template` | Template file (required for `--convert`) |
+| `--output` | Output file (default: STDOUT) |
+| `--pretty` | Pretty-print JSON output (`--generate` mode) |
+| `--verbose` | Enable verbose logging to STDERR |
+| `--version` | Show version and exit |
 
-For complete usage documentation including all options, environment variables, and command line conventions, see the [Usage documentation](https://unitvectory-labs.github.io/json2mdplan/usage).
+## Template Language
 
-## Plan Model
+Templates are JSON documents that mirror the structure of your data. Each node specifies a **render mode** that controls how the corresponding JSON value appears in the Markdown output.
 
-json2mdplan uses a **directive-based interpreter** model. The plan contains a sequential list of directives that are executed top-to-bottom to produce deterministic Markdown output.
+### Render Modes
 
-### Directive Operators
+| Mode | Data Type | Output |
+|---|---|---|
+| `inline` | Object | Properties rendered without a heading wrapper |
+| `section` | Object | Heading + properties |
+| `labeled_value` | Scalar | `- **Label**: value` |
+| `text` | Scalar | Plain paragraph |
+| `heading` | Scalar | Markdown heading |
+| `table` | Array of flat objects | Markdown table |
+| `bullet_list` | Array of scalars | Bullet list |
+| `sections` | Array of objects | Repeated sub-sections |
+| `hidden` | Any | Suppressed from output |
 
-Plans consist of operators that:
-- **Emit content**: headings, text, bullet lists
-- **Control flow**: loops (`for_each`), conditionals (`if_present`), scoping (`with_scope`)
-- **Format data**: labeled values, text styling, value formatting
+### Example
 
-Key operators include:
-- `heading` - Emit Markdown headings
-- `text_line` - Emit paragraphs
-- `labeled_value_line` - Display **Label**: value pairs
-- `for_each` - Loop through arrays
-- `bullet_list` - Render arrays as bullet lists
-- `if_present` - Conditional execution
-- `with_scope` - Navigate into objects
-
-For complete operator documentation, see the [Operators documentation](https://unitvectory-labs.github.io/json2mdplan/operators/).
-
-### Example Plan
+Given this JSON:
 
 ```json
 {
-  "version": 1,
-  "settings": {
-    "base_heading_level": 1
-  },
-  "directives": [
-    {
-      "op": "heading",
-      "level": 1,
-      "text": {"value": {"path": "/title", "from": "root"}}
-    },
-    {
-      "op": "for_each",
-      "array": {"path": "/items", "from": "root"},
-      "do": [
-        {
-          "op": "heading",
-          "level": 2,
-          "text": {"value": {"path": "/name", "from": "current"}}
-        },
-        {
-          "op": "text_line",
-          "text": {"value": {"path": "/description", "from": "current"}}
-        }
-      ]
-    }
-  ]
+  "title": "My Project",
+  "status": "active",
+  "tags": ["go", "cli"]
 }
 ```
 
-## Supported Features
+And this template:
 
-- Headings (H1-H6) with absolute or relative levels
-- Text paragraphs with styling (bold, italic, inline code)
-- Labeled values with customizable separators
-- Bullet lists from arrays
-- Loops with scope management
-- Conditional rendering based on data presence
-- Object scoping for nested structures
-- Text concatenation and formatting
-- Value formatting (text, number, boolean, date, json_compact)
-- Schema title lookups
+```json
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["title", "status", "tags"],
+    "properties": {
+      "title": {"render": "heading"},
+      "status": {"render": "labeled_value", "label": "Status"},
+      "tags": {"render": "bullet_list", "title": "Tags"}
+    }
+  }
+}
+```
 
-## Limitations
+Output:
 
-- The `--plan` mode requires Gemini API access via Vertex AI
-- Schema complexity may affect plan generation quality
-- Heading levels are clamped at H6 for deeply nested structures
+```markdown
+## My Project
+
+- **Status**: active
+
+## Tags
+
+- go
+- cli
+```
+
+## Design Philosophy
+
+- **Data completeness** — every field in the JSON appears in the output unless explicitly hidden
+- **Template reuse** — one template works for any JSON data with the same structure
+- **Deterministic** — same inputs always produce the same Markdown output
+- **LLM-friendly** — templates are simple enough for LLMs to generate and refine

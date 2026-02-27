@@ -1,5 +1,5 @@
 title: json2mdplan
-description: "Unix-style CLI that extracts structure-only JSON, uses Vertex AI (Gemini) structured outputs to generate a schema-validated Markdown plan, then renders Markdown locally from the original JSON without sending raw values to the model."
+description: "CLI tool that converts JSON files to Markdown using customizable, tree-based templates."
 
 remote_theme: just-the-docs/just-the-docs@v0.10.2
 plugins:

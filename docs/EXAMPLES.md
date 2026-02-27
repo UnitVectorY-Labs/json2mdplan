@@ -16,137 +16,123 @@ permalink: /examples
 
 ---
 
-Each example demonstrates a different capability. The `--plan` mode requires authentication and project configuration as described in the [installation instructions](./INSTALL.md). The `--convert` mode requires no authentication.
+## Generate a Template
 
-## Generate a Plan from Schema
+Create a template from a JSON file:
 
-Create a rendering plan from a JSON Schema using Gemini.
+```bash
+json2mdplan --generate --input data.json --pretty > template.json
+```
 
-Given a schema file `schema.json`:
+Given `data.json`:
 
 ```json
 {
-  "type": "object",
-  "title": "Project",
-  "properties": {
-    "name": {
-      "type": "string",
-      "title": "Project Name"
-    },
-    "description": {
-      "type": "string",
-      "title": "Description"
-    },
-    "status": {
-      "type": "string",
-      "title": "Status"
-    }
-  },
-  "required": ["name"]
+  "name": "Project Alpha",
+  "status": "active",
+  "tags": ["go", "cli"]
 }
 ```
 
-Generate a plan:
-
-```bash
-json2mdplan --plan \
-    --schema-file schema.json \
-    --project my-project \
-    --location us-central1 \
-    --model gemini-2.5-flash \
-    --pretty-print \
-    --out plan.json
-```
-
-**Output (`plan.json`):**
+**Output (`template.json`):**
 
 ```json
 {
-  "version": 1,
-  "settings": {
-    "base_heading_level": 1,
-    "include_descriptions": false,
-    "default_array_mode": "objects_as_subsections",
-    "fallback_mode": "json_code_block"
-  },
-  "overrides": [
-    {
-      "path": "/name",
-      "role": "document_title"
-    },
-    {
-      "path": "/description",
-      "role": "prominent_paragraph"
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["name", "status", "tags"],
+    "properties": {
+      "name": { "render": "labeled_value", "label": "Name" },
+      "status": { "render": "labeled_value", "label": "Status" },
+      "tags": { "render": "bullet_list", "label": "Tags" }
     }
-  ]
+  }
 }
 ```
 
 ## Convert JSON to Markdown
 
-Convert a JSON instance to Markdown using a schema and plan.
-
-Given a data file `data.json`:
-
-```json
-{
-  "name": "Project Alpha",
-  "description": "A revolutionary new project.",
-  "status": "Active"
-}
-```
-
-Convert to Markdown:
+Convert a JSON file using a template:
 
 ```bash
-json2mdplan --convert \
-    --json-file data.json \
-    --schema-file schema.json \
-    --plan-file plan.json
+json2mdplan --convert --input data.json --template template.json
 ```
 
 **Output:**
 
 ```markdown
-# Project Alpha
+- **Name**: Project Alpha
+- **Status**: active
 
-A revolutionary new project.
-
-## Status
-
-Active
+- go
+- cli
 ```
 
-## Pipeline Processing
+## Refined Template
 
-Use STDIN and STDOUT for pipeline integration.
-
-```bash
-cat data.json | json2mdplan --convert \
-    --schema-file schema.json \
-    --plan-file plan.json \
-    > output.md
-```
-
-## Array of Objects
-
-Handle arrays with custom item titles.
-
-Given a schema with an array of team members:
+Improve the auto-generated template by changing render modes and adding titles:
 
 ```json
 {
-  "type": "object",
-  "properties": {
-    "team_name": { "type": "string", "title": "Team Name" },
-    "members": {
-      "type": "array",
-      "title": "Members",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string", "title": "Name" },
-          "role": { "type": "string", "title": "Role" }
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["name", "status", "tags"],
+    "properties": {
+      "name": { "render": "heading" },
+      "status": { "render": "labeled_value", "label": "Status" },
+      "tags": { "render": "bullet_list", "title": "Tags" }
+    }
+  }
+}
+```
+
+**Output:**
+
+```markdown
+## Project Alpha
+
+- **Status**: active
+
+## Tags
+
+- go
+- cli
+```
+
+## Table Rendering
+
+Arrays of flat objects render as tables:
+
+Given `team.json`:
+
+```json
+{
+  "team": [
+    { "name": "Alice", "role": "Lead" },
+    { "name": "Bob", "role": "Developer" }
+  ]
+}
+```
+
+With template:
+
+```json
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "properties": {
+      "team": {
+        "render": "table",
+        "title": "Team",
+        "items": {
+          "order": ["name", "role"],
+          "properties": {
+            "name": { "label": "Name" },
+            "role": { "label": "Role" }
+          }
         }
       }
     }
@@ -154,158 +140,87 @@ Given a schema with an array of team members:
 }
 ```
 
-With a plan that specifies `array_section` with `item_title_from`:
-
-```json
-{
-  "version": 1,
-  "settings": {
-    "base_heading_level": 1,
-    "include_descriptions": false,
-    "default_array_mode": "objects_as_subsections",
-    "fallback_mode": "json_code_block"
-  },
-  "overrides": [
-    { "path": "/team_name", "role": "document_title" },
-    { "path": "/members", "role": "array_section", "item_title_from": "/name", "item_title_fallback": "Member {{index}}" }
-  ]
-}
-```
-
-And data:
-
-```json
-{
-  "team_name": "Engineering",
-  "members": [
-    { "name": "Alice", "role": "Lead Developer" },
-    { "name": "Bob", "role": "Designer" }
-  ]
-}
-```
-
 **Output:**
 
 ```markdown
-# Engineering
+## Team
 
-## Members
-
-### Alice
-
-#### Role
-
-Lead Developer
-
-### Bob
-
-#### Role
-
-Designer
+| Name | Role |
+| --- | --- |
+| Alice | Lead |
+| Bob | Developer |
 ```
 
-## Suppress Fields
+## Sections Rendering
 
-Hide internal or sensitive fields from the output.
+Arrays of complex objects render as sub-sections:
 
-Use the `suppress` role in the plan:
+Given `phases.json`:
 
 ```json
 {
-  "overrides": [
-    { "path": "/internal_id", "role": "suppress" },
-    { "path": "/debug_info", "role": "suppress" }
+  "phases": [
+    { "name": "Phase 1", "status": "done", "tasks": [{"id": 1}] },
+    { "name": "Phase 2", "status": "pending", "tasks": [{"id": 2}] }
   ]
 }
 ```
 
-## Render Complex Data as JSON
-
-For complex nested structures, render them as JSON code blocks.
-
-Use the `render_as_json` role:
+With template using `title_key`:
 
 ```json
 {
-  "overrides": [
-    { "path": "/config", "role": "render_as_json" }
-  ]
-}
-```
-
-**Output:**
-
-````markdown
-## Config
-
-```json
-{
-  "setting1": "value1",
-  "setting2": 42,
-  "nested": {
-    "deep": true
-  }
-}
-```
-````
-
-## Custom Property Order
-
-Override the default property ordering for an object.
-
-Use the `object_order` role:
-
-```json
-{
-  "overrides": [
-    {
-      "path": "",
-      "role": "object_order",
-      "order": ["summary", "details", "metadata"]
-    }
-  ]
-}
-```
-
-Properties will be rendered in the specified order, followed by any remaining properties in their default order (required first, then alphabetically).
-
-## Include Schema Descriptions
-
-Enable schema descriptions as paragraphs under headings.
-
-In the plan settings:
-
-```json
-{
-  "settings": {
-    "base_heading_level": 1,
-    "include_descriptions": true,
-    "default_array_mode": "objects_as_subsections",
-    "fallback_mode": "json_code_block"
-  }
-}
-```
-
-If your schema has:
-
-```json
-{
-  "properties": {
-    "name": {
-      "type": "string",
-      "title": "Name",
-      "description": "The full name of the person"
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "properties": {
+      "phases": {
+        "render": "sections",
+        "title": "Phases",
+        "items": {
+          "render": "inline",
+          "title_key": "name",
+          "order": ["status", "tasks"],
+          "properties": {
+            "status": { "render": "labeled_value", "label": "Status" },
+            "tasks": { "render": "table", "title": "Tasks" }
+          }
+        }
+      }
     }
   }
 }
 ```
 
-**Output:**
+## Pipeline Processing
 
-```markdown
-## Name
+Use STDIN and STDOUT for pipeline integration:
 
-The full name of the person
+```bash
+cat data.json | json2mdplan --convert --template template.json > output.md
+```
 
-John Doe
+Generate and convert in one pipeline:
+
+```bash
+json2mdplan --generate --input data.json --pretty | \
+  json2mdplan --convert --input data.json --template /dev/stdin
+
+```
+
+## Hidden Fields
+
+Suppress fields from the output:
+
+```json
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "properties": {
+      "name": { "render": "labeled_value", "label": "Name" },
+      "internal_id": { "render": "hidden" }
+    }
+  }
+}
 ```

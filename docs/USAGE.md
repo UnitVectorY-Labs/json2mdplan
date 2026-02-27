@@ -10,106 +10,62 @@ permalink: /usage
 The `json2mdplan` application has two mutually exclusive modes and follows Unix-style CLI conventions.
 
 ```
-json2mdplan --plan [OPTIONS]     # Generate a plan from JSON Schema
-json2mdplan --convert [OPTIONS]  # Convert JSON to Markdown
+json2mdplan --generate [OPTIONS]  # Generate a template from JSON
+json2mdplan --convert [OPTIONS]   # Convert JSON to Markdown
 ```
 
-## Plan Mode Options
+## Generate Mode
 
-Generate a Plan JSON from a JSON Schema using Gemini.
+Generate a template from a JSON file.
 
-| Option          | Arg    | Required | Notes                                           |
-|-----------------|--------|----------|-------------------------------------------------|
-| `--plan`        |        | yes      | Enable plan generation mode                     |
-| `--schema`      | json   | yes*     | Exactly one* of this or `--schema-file`         |
-| `--schema-file` | path   | yes*     | Exactly one* of this or `--schema`              |
-| `--project`     | id     | yes      | Environment variable fallback supported         |
-| `--location`    | region | yes      | Environment variable fallback supported         |
-| `--model`       | name   | yes      | Gemini model id                                 |
-| `--timeout`     | int    | no       | HTTP request timeout in seconds; default is 60  |
-| `--out`         | path   | no       | Output file path; defaults to STDOUT if not set |
-| `--pretty-print`|        | no       | Pretty-print JSON output; default is minified   |
-| `--verbose`     |        | no       | Logs additional information to STDERR           |
+```bash
+json2mdplan --generate --input data.json --pretty
+```
 
-If neither `--schema` nor `--schema-file` is provided, the schema is read from STDIN.
+Or from STDIN:
 
-## Convert Mode Options
+```bash
+cat data.json | json2mdplan --generate --pretty > template.json
+```
 
-Convert a JSON instance to Markdown using a schema and plan (no LLM required).
+## Convert Mode
 
-| Option          | Arg    | Required | Notes                                           |
-|-----------------|--------|----------|-------------------------------------------------|
-| `--convert`     |        | yes      | Enable convert mode                             |
-| `--json`        | json   | no*      | JSON instance inline                            |
-| `--json-file`   | path   | no*      | JSON instance from file                         |
-| `--schema`      | json   | yes*     | Exactly one* of this or `--schema-file`         |
-| `--schema-file` | path   | yes*     | Exactly one* of this or `--schema`              |
-| `--plan-json`   | json   | yes*     | Exactly one* of this or `--plan-file`           |
-| `--plan-file`   | path   | yes*     | Exactly one* of this or `--plan-json`           |
-| `--out`         | path   | no       | Output file path; defaults to STDOUT if not set |
-| `--verbose`     |        | no       | Logs additional information to STDERR           |
+Convert a JSON file to Markdown using a template.
 
-If neither `--json` nor `--json-file` is provided, the JSON instance is read from STDIN.
+```bash
+json2mdplan --convert --input data.json --template template.json
+```
 
-## Common Options
+Or from STDIN:
 
-| Option      | Notes                    |
-|-------------|--------------------------|
-| `--version` | Print version and exit   |
-| `--help`    | Print help and exit      |
+```bash
+cat data.json | json2mdplan --convert --template template.json > output.md
+```
 
-## Environment Variables
+## All Options
 
-Options always take precedence over environment variables.
-
-| Option      | Environment Variables                                                     |
-|-------------|---------------------------------------------------------------------------|
-| `--project` | `GOOGLE_CLOUD_PROJECT`, `CLOUDSDK_CORE_PROJECT`                           |
-| `--location`| `GOOGLE_CLOUD_LOCATION`, `GOOGLE_CLOUD_REGION`, `CLOUDSDK_COMPUTE_REGION` |
+| Flag | Arg | Mode | Description |
+|---|---|---|---|
+| `--generate` | | | Generate a template from JSON input |
+| `--convert` | | | Convert JSON to Markdown using a template |
+| `--input` | path | both | Input JSON file (default: STDIN) |
+| `--template` | path | convert | Template file (required for `--convert`) |
+| `--output` | path | both | Output file (default: STDOUT) |
+| `--pretty` | | generate | Pretty-print JSON output |
+| `--verbose` | | both | Enable verbose logging to STDERR |
+| `--version` | | | Show version and exit |
 
 ## Command Line Conventions
 
-The `json2mdplan` CLI follows standard UNIX conventions for input and output.
-
-- STDIN is used for schema input (plan mode) or JSON instance (convert mode) when flags are not provided
-- STDOUT emits the result when `--out` is not specified
+- STDIN is used for JSON input when `--input` is not provided
+- STDOUT emits the result when `--output` is not specified
 - STDERR is reserved for logs, errors, and verbose output
 
 ### Exit Codes
 
-| Code | Meaning                     |
-|------|-----------------------------|
-| 0    | Success                     |
-| 2    | CLI usage error             |
-| 3    | Input read/parse error      |
-| 4    | Validation or response error|
-| 5    | API/auth error              |
-
-## Plan Schema
-
-The generated plan follows a strict JSON Schema that defines:
-
-- `version`: Plan format version (must be 1)
-- `settings`: Global rendering settings (base heading level, include descriptions, array mode, fallback mode)
-- `overrides`: Path-based rendering overrides
-
-### Override Roles
-
-| Role                  | Purpose                                           |
-|-----------------------|---------------------------------------------------|
-| `document_title`      | Designate a scalar field as the document title    |
-| `prominent_paragraph` | Render a field as a paragraph without a heading   |
-| `section`             | Force a heading boundary for a node               |
-| `object_order`        | Override property output order                    |
-| `array_section`       | Specify how to title array items                  |
-| `suppress`            | Omit a field or subtree from output               |
-| `render_as_json`      | Render a subtree as a JSON code block             |
-
-## Validation
-
-The convert mode performs several validation steps:
-
-1. Parse all inputs as JSON
-2. Validate JSON instance against JSON Schema
-3. Validate Plan against Plan Schema
-4. Verify plan-schema compatibility using fingerprint matching
+| Code | Meaning |
+|---|---|
+| 0 | Success |
+| 2 | CLI usage error |
+| 3 | Input read/parse error |
+| 4 | Template validation error |

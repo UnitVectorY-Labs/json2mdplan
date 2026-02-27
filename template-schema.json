@@ -1,1 +1,68 @@
-{}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "json2mdplan Template",
+  "description": "Defines how JSON data is rendered to Markdown by json2mdplan.",
+  "type": "object",
+  "required": ["version", "template"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1",
+      "description": "Template format version. Must be \"1\"."
+    },
+    "template": {
+      "$ref": "#/$defs/TemplateNode",
+      "description": "Root template node describing how to render the JSON document."
+    }
+  },
+  "$defs": {
+    "TemplateNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "render": {
+          "type": "string",
+          "enum": [
+            "section",
+            "inline",
+            "table",
+            "bullet_list",
+            "sections",
+            "labeled_value",
+            "text",
+            "heading",
+            "hidden"
+          ],
+          "description": "How this node should be rendered in Markdown."
+        },
+        "title": {
+          "type": "string",
+          "description": "Heading text for sections or arrays."
+        },
+        "label": {
+          "type": "string",
+          "description": "Label text for labeled_value render mode."
+        },
+        "title_key": {
+          "type": "string",
+          "description": "Property key whose value is used as the heading for each item in a sections array."
+        },
+        "order": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Property rendering order. Properties not listed are appended alphabetically."
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/TemplateNode" },
+          "description": "Child template nodes keyed by JSON property name."
+        },
+        "items": {
+          "$ref": "#/$defs/TemplateNode",
+          "description": "Template node for array items."
+        }
+      }
+    }
+  }
+}
