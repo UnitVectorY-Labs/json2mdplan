@@ -1,9 +1,0 @@
-{
-  "settings": {
-    "base_heading_level": 1,
-    "include_descriptions": true,
-    "default_array_mode": "objects_as_subsections",
-    "fallback_mode": "json_code_block"
-  },
-  "overrides": []
-}
