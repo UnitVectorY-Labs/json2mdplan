@@ -1,0 +1,3 @@
+- **name:** Widget
+- **count:** 3
+- **price:** 19.99
