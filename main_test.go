@@ -12,15 +12,15 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
-// TestConvert runs data-driven tests for the convert functionality.
-// Each subdirectory in testdata/convert/ represents a test case with:
+// TestConvertDirectives runs data-driven tests for the directive-based convert functionality.
+// Each subdirectory in testdata/convert-directives/ represents a test case with:
 //   - instance.json: the JSON instance to convert
 //   - schema.json: the JSON Schema
-//   - plan.json: the plan file
+//   - plan.json: the directive-based plan file
 //   - expected.md: the expected Markdown output
-func TestConvert(t *testing.T) {
-	testdataDir := "testdata/convert"
-	
+func TestConvertDirectives(t *testing.T) {
+	testdataDir := "testdata/convert-directives"
+
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
 		t.Fatalf("failed to read testdata directory: %v", err)
@@ -66,7 +66,7 @@ func TestConvert(t *testing.T) {
 			actual = strings.TrimSpace(actual)
 
 			if actual != expected {
-				t.Errorf("output mismatch\n\nExpected:\n%s\n\nActual:\n%s\n\nDiff:\n%s", 
+				t.Errorf("output mismatch\n\nExpected:\n%s\n\nActual:\n%s\n\nDiff:\n%s",
 					expected, actual, diff(expected, actual))
 			}
 		})
@@ -241,10 +241,10 @@ func validatePlanBytes(planBytes []byte) error {
 // TestSchemaDigest tests the schema digest generation
 func TestSchemaDigest(t *testing.T) {
 	testCases := []struct {
-		name           string
-		schema         string
-		expectedPaths  int
-		expectedRoot   string
+		name          string
+		schema        string
+		expectedPaths int
+		expectedRoot  string
 	}{
 		{
 			name: "simple-object",

@@ -63,11 +63,6 @@ json2mdplan --plan \
 ```json
 {
   "version": 1,
-  "schema_fingerprint": {
-    "sha256": "abc123...",
-    "canonicalization": "json-canonical-v1",
-    "source_hint": "schema.json"
-  },
   "settings": {
     "base_heading_level": 1,
     "include_descriptions": false,
@@ -164,7 +159,6 @@ With a plan that specifies `array_section` with `item_title_from`:
 ```json
 {
   "version": 1,
-  "schema_fingerprint": { "sha256": "...", "canonicalization": "json-canonical-v1" },
   "settings": {
     "base_heading_level": 1,
     "include_descriptions": false,

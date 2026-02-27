@@ -28,6 +28,7 @@ import (
 var Version = "dev" // This will be set by the build system to the release version
 
 // Embedded files
+//
 //go:embed plan-schema.json
 var planSchemaJSON string
 
@@ -147,7 +148,7 @@ func defineFlags() {
 	flag.StringVar(&projectFlag, "project", "", "GCP project ID")
 	flag.StringVar(&locationFlag, "location", "", "GCP location/region")
 	flag.StringVar(&modelFlag, "model", "", "Gemini model identifier")
-	flag.IntVar(&timeout, "timeout", 60, "HTTP request timeout in seconds (default: 60)")
+	flag.IntVar(&timeout, "timeout", 300, "HTTP request timeout in seconds (default: 300)")
 
 	// Misc
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging to STDERR")
@@ -193,7 +194,7 @@ Usage:
     --out PATH              Write Markdown to file (default: STDOUT)
 
 Common options:
-  --timeout SECONDS         HTTP request timeout (default: 60, --plan mode only)
+  --timeout SECONDS         HTTP request timeout (default: 300, --plan mode only)
   --verbose                 Log diagnostics to STDERR
   --version                 Print version and exit
   --help                    Print help and exit
@@ -231,17 +232,17 @@ Example (convert mode):
 // ============================================================================
 
 type PlanConfig struct {
-	Schema          map[string]interface{}
-	SchemaBytes     []byte
-	SchemaSrc       string
-	CompiledSchema  *jsonschema.Schema
-	Project         string
-	Location        string
-	Model           string
-	Timeout         int
-	OutFile         string
-	Verbose         bool
-	PrettyPrint     bool
+	Schema           map[string]interface{}
+	SchemaBytes      []byte
+	SchemaSrc        string
+	CompiledSchema   *jsonschema.Schema
+	Project          string
+	Location         string
+	Model            string
+	Timeout          int
+	OutFile          string
+	Verbose          bool
+	PrettyPrint      bool
 	SchemaSourceHint string
 }
 
@@ -278,13 +279,6 @@ func runPlanMode() error {
 	var plan map[string]interface{}
 	if err := json.Unmarshal([]byte(responseJSON), &plan); err != nil {
 		return &validationError{fmt.Sprintf("LLM response is not valid JSON: %v", err)}
-	}
-
-	// Update fingerprint in the plan (LLM may not have it correct)
-	plan["schema_fingerprint"] = map[string]interface{}{
-		"sha256":          fingerprint,
-		"canonicalization": "json-canonical-v1",
-		"source_hint":     config.SchemaSourceHint,
 	}
 
 	// Ensure version is set
@@ -616,13 +610,7 @@ func buildPlanRequest(config *PlanConfig, digest *SchemaDigest, fingerprint stri
 		return nil, &inputError{fmt.Sprintf("failed to marshal schema digest: %v", err)}
 	}
 
-	userPrompt := fmt.Sprintf(`Here is the Schema Digest for which you need to generate a plan:
-
-%s
-
-The schema fingerprint is: %s
-
-Generate a Plan JSON that will guide deterministic JSON-to-Markdown conversion for documents conforming to this schema.`, string(digestBytes), fingerprint)
+	userPrompt := string(digestBytes)
 
 	// Parse plan schema for response constraint
 	var planSchema map[string]interface{}
@@ -810,6 +798,13 @@ func validatePlan(plan map[string]interface{}) error {
 	}
 
 	if err := compiledSchema.Validate(planObj); err != nil {
+		// Print the plan JSON to STDERR to aid debugging of validation errors.
+		var pretty bytes.Buffer
+		if jerr := json.Indent(&pretty, planBytes, "", "  "); jerr == nil {
+			fmt.Fprintf(os.Stderr, "Plan JSON (for debugging):\n%s\n", pretty.String())
+		} else {
+			fmt.Fprintf(os.Stderr, "Plan JSON (raw):\n%s\n", string(planBytes))
+		}
 		return &validationError{fmt.Sprintf("plan validation failed: %v", err)}
 	}
 
@@ -821,46 +816,31 @@ func validatePlan(plan map[string]interface{}) error {
 // ============================================================================
 
 type ConvertConfig struct {
-	JSONInstance    interface{}
-	JSONBytes       []byte
-	JSONSrc         string
-	Schema          map[string]interface{}
-	SchemaBytes     []byte
-	SchemaSrc       string
-	Plan            *Plan
-	PlanBytes       []byte
-	PlanSrc         string
-	OutFile         string
-	Verbose         bool
+	JSONInstance interface{}
+	JSONBytes    []byte
+	JSONSrc      string
+	Schema       map[string]interface{}
+	SchemaBytes  []byte
+	SchemaSrc    string
+	Plan         *Plan
+	PlanBytes    []byte
+	PlanSrc      string
+	OutFile      string
+	Verbose      bool
 }
 
 type Plan struct {
-	Version           int                    `json:"version"`
-	SchemaFingerprint SchemaFingerprint      `json:"schema_fingerprint"`
-	Settings          PlanSettings           `json:"settings"`
-	Overrides         []Override             `json:"overrides"`
-}
-
-type SchemaFingerprint struct {
-	SHA256          string `json:"sha256"`
-	Canonicalization string `json:"canonicalization"`
-	SourceHint      string `json:"source_hint,omitempty"`
+	Version    int          `json:"version"`
+	Settings   PlanSettings `json:"settings"`
+	Directives []Directive  `json:"directives"`
 }
 
 type PlanSettings struct {
-	BaseHeadingLevel    int    `json:"base_heading_level"`
-	IncludeDescriptions bool   `json:"include_descriptions"`
-	DefaultArrayMode    string `json:"default_array_mode"`
-	FallbackMode        string `json:"fallback_mode"`
+	BaseHeadingLevel int    `json:"base_heading_level"`
+	NullText         string `json:"null_text,omitempty"`
 }
 
-type Override struct {
-	Path              string   `json:"path"`
-	Role              string   `json:"role"`
-	Order             []string `json:"order,omitempty"`
-	ItemTitleFrom     string   `json:"item_title_from,omitempty"`
-	ItemTitleFallback string   `json:"item_title_fallback,omitempty"`
-}
+type Directive map[string]interface{}
 
 func runConvertMode() error {
 	config, err := loadConvertConfiguration()
@@ -871,21 +851,6 @@ func runConvertMode() error {
 	// Validate JSON instance against schema
 	if err := validateJSONAgainstSchema(config); err != nil {
 		return err
-	}
-
-	// Verify plan-schema compatibility
-	schemaFingerprint := calculateFingerprint(config.SchemaBytes)
-	if config.Plan.SchemaFingerprint.SHA256 != schemaFingerprint {
-		if config.Verbose {
-			fmt.Fprintf(os.Stderr, "Warning: schema fingerprint mismatch\n")
-			fmt.Fprintf(os.Stderr, "  Plan fingerprint: %s\n", config.Plan.SchemaFingerprint.SHA256)
-			fmt.Fprintf(os.Stderr, "  Schema fingerprint: %s\n", schemaFingerprint)
-		}
-		return &validationError{"plan-schema fingerprint mismatch: the plan was generated for a different schema"}
-	}
-
-	if config.Verbose {
-		fmt.Fprintf(os.Stderr, "Schema fingerprint verified: %s\n", schemaFingerprint)
 	}
 
 	// Convert to Markdown
@@ -1026,6 +991,13 @@ func loadConvertConfiguration() (*ConvertConfig, error) {
 	}
 
 	if err := compiledPlanSchema.Validate(planObj); err != nil {
+		// Print the plan JSON to STDERR for easier debugging when an invalid plan is provided.
+		var pretty bytes.Buffer
+		if jerr := json.Indent(&pretty, planBytes, "", "  "); jerr == nil {
+			fmt.Fprintf(os.Stderr, "Plan JSON (for debugging):\n%s\n", pretty.String())
+		} else {
+			fmt.Fprintf(os.Stderr, "Plan JSON (raw):\n%s\n", string(planBytes))
+		}
 		return nil, &validationError{fmt.Sprintf("plan validation failed: %v", err)}
 	}
 
@@ -1065,335 +1037,415 @@ func validateJSONAgainstSchema(config *ConvertConfig) error {
 // Markdown Conversion
 // ============================================================================
 
-type MarkdownRenderer struct {
-	config    *ConvertConfig
-	output    strings.Builder
-	overrides map[string]Override
+type DirectiveInterpreter struct {
+	config       *ConvertConfig
+	schemaDigest *SchemaDigest
+	output       strings.Builder
+	scopeStack   []interface{}
+	suppressed   map[string]bool
 }
 
 func convertToMarkdown(config *ConvertConfig) string {
-	renderer := &MarkdownRenderer{
-		config:    config,
-		overrides: make(map[string]Override),
+	// Generate schema digest for schema title lookups
+	digest := generateSchemaDigest(config.Schema)
+
+	interpreter := &DirectiveInterpreter{
+		config:       config,
+		schemaDigest: digest,
+		scopeStack:   []interface{}{config.JSONInstance},
+		suppressed:   make(map[string]bool),
 	}
 
-	// Index overrides by path
-	for _, override := range config.Plan.Overrides {
-		renderer.overrides[override.Path] = override
-	}
+	// Execute directives
+	interpreter.executeDirectives(config.Plan.Directives)
 
-	// Find document_title and prominent_paragraph
-	var documentTitlePath string
-	var prominentParagraphPath string
-	for path, override := range renderer.overrides {
-		if override.Role == "document_title" {
-			documentTitlePath = path
-		} else if override.Role == "prominent_paragraph" {
-			prominentParagraphPath = path
-		}
-	}
-
-	baseLevel := config.Plan.Settings.BaseHeadingLevel
-	if baseLevel < 1 {
-		baseLevel = 1
-	}
-
-	// Render document title if specified
-	if documentTitlePath != "" {
-		titleValue := renderer.getValueAtPath(config.JSONInstance, documentTitlePath)
-		if titleValue != nil {
-			if titleStr, ok := titleValue.(string); ok && titleStr != "" {
-				renderer.writeHeading(baseLevel, titleStr)
-			}
-		}
-	}
-
-	// Render prominent paragraph if specified
-	if prominentParagraphPath != "" {
-		paragraphValue := renderer.getValueAtPath(config.JSONInstance, prominentParagraphPath)
-		if paragraphValue != nil {
-			if paragraphStr, ok := paragraphValue.(string); ok && paragraphStr != "" {
-				renderer.writeParagraph(paragraphStr)
-			}
-		}
-	}
-
-	// Render the rest of the document
-	renderer.renderNode(config.JSONInstance, config.Schema, "", baseLevel, documentTitlePath, prominentParagraphPath)
-
-	return strings.TrimSpace(renderer.output.String())
+	return strings.TrimSpace(interpreter.output.String())
 }
 
-func (r *MarkdownRenderer) renderNode(value interface{}, schema map[string]interface{}, path string, depth int, skipTitle string, skipParagraph string) {
-	// Check for suppress override
-	if override, ok := r.overrides[path]; ok && override.Role == "suppress" {
+func (interp *DirectiveInterpreter) executeDirectives(directives []Directive) {
+	for _, directive := range directives {
+		interp.executeDirective(directive)
+	}
+}
+
+func (interp *DirectiveInterpreter) executeDirective(directive Directive) {
+	op, ok := directive["op"].(string)
+	if !ok {
 		return
 	}
 
-	// Check for render_as_json override
-	if override, ok := r.overrides[path]; ok && override.Role == "render_as_json" {
-		r.renderAsJSON(value)
+	// Check when condition
+	if when, ok := directive["when"]; ok {
+		if !interp.evaluateCondition(when) {
+			return
+		}
+	}
+
+	switch op {
+	case "heading":
+		interp.execHeading(directive)
+	case "blank_line":
+		interp.execBlankLine(directive)
+	case "text_line":
+		interp.execTextLine(directive)
+	case "labeled_value_line":
+		interp.execLabeledValueLine(directive)
+	case "for_each":
+		interp.execForEach(directive)
+	case "with_scope":
+		interp.execWithScope(directive)
+	case "if_present":
+		interp.execIfPresent(directive)
+	case "bullet_list":
+		interp.execBulletList(directive)
+	case "suppress":
+		interp.execSuppress(directive)
+	}
+}
+
+func (interp *DirectiveInterpreter) execHeading(directive Directive) {
+	text := interp.resolveTextUnion(directive["text"])
+	if text == "" {
 		return
 	}
 
+	level := 1
+	if lvl, ok := directive["level"].(float64); ok {
+		level = int(lvl)
+	} else if lvlFromBase, ok := directive["level_from_base"].(float64); ok {
+		level = interp.config.Plan.Settings.BaseHeadingLevel + int(lvlFromBase)
+	}
+
+	level = clampHeadingLevel(level)
+	interp.writeHeading(level, text)
+}
+
+func (interp *DirectiveInterpreter) execBlankLine(directive Directive) {
+	count := 1
+	if c, ok := directive["count"].(float64); ok {
+		count = int(c)
+	}
+	for i := 0; i < count; i++ {
+		interp.output.WriteString("\n")
+	}
+}
+
+func (interp *DirectiveInterpreter) execTextLine(directive Directive) {
+	text := interp.resolveTextUnion(directive["text"])
+	if text == "" {
+		return
+	}
+
+	// Apply style
+	style := "plain"
+	if s, ok := directive["style"].(string); ok {
+		style = s
+	}
+	text = interp.applyStyle(text, style)
+
+	// Add prefix/suffix
+	if prefix, ok := directive["prefix"].(string); ok {
+		text = prefix + text
+	}
+	if suffix, ok := directive["suffix"].(string); ok {
+		text = text + suffix
+	}
+
+	// Check escape
+	escape := true
+	if esc, ok := directive["escape"].(bool); ok {
+		escape = esc
+	}
+
+	if escape {
+		text = escapeMarkdown(text)
+	}
+
+	interp.output.WriteString(text)
+	interp.output.WriteString("\n\n")
+}
+
+func (interp *DirectiveInterpreter) execLabeledValueLine(directive Directive) {
+	skipIfMissing := true
+	if skip, ok := directive["skip_if_missing"].(bool); ok {
+		skipIfMissing = skip
+	}
+
+	valueRef, ok := directive["value"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	value := interp.resolveValueReference(valueRef)
+	if value == nil && skipIfMissing {
+		return
+	}
+
+	label := interp.resolveTextUnion(directive["label"])
+	if label == "" {
+		return
+	}
+
+	// Escape label before applying style
+	label = escapeMarkdown(label)
+
+	labelStyle := "bold"
+	if ls, ok := directive["label_style"].(string); ok {
+		labelStyle = ls
+	}
+	if labelStyle == "bold" {
+		label = "**" + label + "**"
+	}
+
+	separator := ": "
+	if sep, ok := directive["separator"].(string); ok {
+		separator = sep
+	}
+
+	valueFormat := "text"
+	if vf, ok := directive["value_format"].(string); ok {
+		valueFormat = vf
+	}
+
+	valueStr := interp.formatValue(value, valueFormat)
+
+	line := label + separator + escapeMarkdown(valueStr)
+	interp.output.WriteString(line)
+	interp.output.WriteString("\n\n")
+}
+
+func (interp *DirectiveInterpreter) execForEach(directive Directive) {
+	arrayRef, ok := directive["array"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	arrayValue := interp.resolveValueReference(arrayRef)
+	array, ok := arrayValue.([]interface{})
+	if !ok || len(array) == 0 {
+		return
+	}
+
+	doDirectives, ok := directive["do"].([]interface{})
+	if !ok {
+		return
+	}
+
+	betweenDirectives, _ := directive["between_items"].([]interface{})
+
+	for i, item := range array {
+		// Push item scope
+		interp.scopeStack = append(interp.scopeStack, item)
+
+		// Execute do directives
+		interp.executeDirectives(convertToDirectives(doDirectives))
+
+		// Pop scope
+		interp.scopeStack = interp.scopeStack[:len(interp.scopeStack)-1]
+
+		// Execute between_items if not last item
+		if i < len(array)-1 && len(betweenDirectives) > 0 {
+			interp.executeDirectives(convertToDirectives(betweenDirectives))
+		}
+	}
+}
+
+func (interp *DirectiveInterpreter) execWithScope(directive Directive) {
+	valueRef, ok := directive["value"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	value := interp.resolveValueReference(valueRef)
 	if value == nil {
 		return
 	}
 
-	schemaType, _ := schema["type"].(string)
-
-	switch schemaType {
-	case "object":
-		r.renderObject(value, schema, path, depth, skipTitle, skipParagraph)
-	case "array":
-		r.renderArray(value, schema, path, depth)
-	case "string", "number", "integer", "boolean":
-		r.renderScalar(value, schema, path, depth, skipTitle, skipParagraph)
-	default:
-		// Fallback for unknown types
-		r.renderAsJSON(value)
-	}
-}
-
-func (r *MarkdownRenderer) renderObject(value interface{}, schema map[string]interface{}, path string, depth int, skipTitle string, skipParagraph string) {
-	obj, ok := value.(map[string]interface{})
+	doDirectives, ok := directive["do"].([]interface{})
 	if !ok {
-		r.renderAsJSON(value)
 		return
 	}
 
-	properties, _ := schema["properties"].(map[string]interface{})
-	if properties == nil {
-		r.renderAsJSON(value)
-		return
-	}
+	// Push scope
+	interp.scopeStack = append(interp.scopeStack, value)
 
-	// Get required fields
-	var requiredFields []string
-	if req, ok := schema["required"].([]interface{}); ok {
-		for _, r := range req {
-			if s, ok := r.(string); ok {
-				requiredFields = append(requiredFields, s)
-			}
-		}
-	}
+	// Execute directives
+	interp.executeDirectives(convertToDirectives(doDirectives))
 
-	// Determine property order
-	orderedProps := r.getPropertyOrder(path, properties, requiredFields)
-
-	// Render each property
-	for _, propName := range orderedProps {
-		propPath := path + "/" + propName
-		
-		// Skip if this is the document title or prominent paragraph (already rendered)
-		if propPath == skipTitle || propPath == skipParagraph {
-			continue
-		}
-
-		// Check for suppress override on this property
-		if override, ok := r.overrides[propPath]; ok && override.Role == "suppress" {
-			continue
-		}
-
-		propValue, exists := obj[propName]
-		if !exists || propValue == nil {
-			continue
-		}
-
-		propSchema, ok := properties[propName].(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		propType, _ := propSchema["type"].(string)
-		label := r.getLabel(propSchema, propName)
-
-		// For scalars, emit heading then value
-		if propType == "string" || propType == "number" || propType == "integer" || propType == "boolean" {
-			r.writeHeading(r.clampHeadingLevel(depth), label)
-			if r.config.Plan.Settings.IncludeDescriptions {
-				if desc, ok := propSchema["description"].(string); ok && desc != "" {
-					r.writeParagraph(desc)
-				}
-			}
-			r.writeParagraph(formatScalar(propValue))
-		} else if propType == "object" || propType == "array" {
-			// For objects and arrays, emit heading then recurse
-			r.writeHeading(r.clampHeadingLevel(depth), label)
-			if r.config.Plan.Settings.IncludeDescriptions {
-				if desc, ok := propSchema["description"].(string); ok && desc != "" {
-					r.writeParagraph(desc)
-				}
-			}
-			r.renderNode(propValue, propSchema, propPath, depth+1, skipTitle, skipParagraph)
-		} else {
-			// Unknown type - fallback
-			r.writeHeading(r.clampHeadingLevel(depth), label)
-			r.renderAsJSON(propValue)
-		}
-	}
+	// Pop scope
+	interp.scopeStack = interp.scopeStack[:len(interp.scopeStack)-1]
 }
 
-func (r *MarkdownRenderer) renderArray(value interface{}, schema map[string]interface{}, path string, depth int) {
-	arr, ok := value.([]interface{})
+func (interp *DirectiveInterpreter) execIfPresent(directive Directive) {
+	valueRef, ok := directive["value"].(map[string]interface{})
 	if !ok {
-		r.renderAsJSON(value)
 		return
 	}
 
-	if len(arr) == 0 {
+	mode := "non_null"
+	if m, ok := directive["mode"].(string); ok {
+		mode = m
+	}
+
+	value := interp.resolveValueReference(valueRef)
+	present := interp.testPresence(value, mode)
+
+	if present {
+		if thenDirectives, ok := directive["then"].([]interface{}); ok {
+			interp.executeDirectives(convertToDirectives(thenDirectives))
+		}
+	} else {
+		if elseDirectives, ok := directive["else"].([]interface{}); ok {
+			interp.executeDirectives(convertToDirectives(elseDirectives))
+		}
+	}
+}
+
+func (interp *DirectiveInterpreter) execBulletList(directive Directive) {
+	itemsRef, ok := directive["items"].(map[string]interface{})
+	if !ok {
 		return
 	}
 
-	itemsSchema, _ := schema["items"].(map[string]interface{})
-	if itemsSchema == nil {
-		r.renderAsJSON(value)
+	itemsValue := interp.resolveValueReference(itemsRef)
+	items, ok := itemsValue.([]interface{})
+	if !ok || len(items) == 0 {
 		return
 	}
 
-	itemType, _ := itemsSchema["type"].(string)
-
-	// Check for array_section override
-	var arraySectionOverride *Override
-	if override, ok := r.overrides[path]; ok && override.Role == "array_section" {
-		arraySectionOverride = &override
+	bullet := "- "
+	if b, ok := directive["bullet"].(string); ok {
+		bullet = b
 	}
 
-	switch itemType {
-	case "object":
-		// Array of objects - render each as subsection
-		for i, item := range arr {
-			itemTitle := r.getArrayItemTitle(item, i, arraySectionOverride)
-			r.writeHeading(r.clampHeadingLevel(depth), itemTitle)
-			
-			itemPath := fmt.Sprintf("%s/%d", path, i)
-			
-			// Determine which field to skip (used for item title)
-			skipItemTitleField := ""
-			if arraySectionOverride != nil && arraySectionOverride.ItemTitleFrom != "" {
-				// Convert relative path like "/name" to absolute path like "/members/0/name"
-				skipItemTitleField = itemPath + arraySectionOverride.ItemTitleFrom
+	skipEmpty := true
+	if se, ok := directive["skip_empty"].(bool); ok {
+		skipEmpty = se
+	}
+
+	// Check if item_format or item_text
+	if itemFormat, ok := directive["item_format"].(string); ok {
+		// Array of scalars
+		for _, item := range items {
+			valueStr := interp.formatValue(item, itemFormat)
+			if skipEmpty && valueStr == "" {
+				continue
 			}
-			
-			r.renderNode(item, itemsSchema, itemPath, depth+1, skipItemTitleField, "")
+			interp.output.WriteString(bullet)
+			interp.output.WriteString(escapeMarkdown(valueStr))
+			interp.output.WriteString("\n")
 		}
+		interp.output.WriteString("\n")
+	} else if itemText, ok := directive["item_text"]; ok {
+		// Array of objects
+		for _, item := range items {
+			// Push item scope
+			interp.scopeStack = append(interp.scopeStack, item)
 
-	case "string", "number", "integer", "boolean":
-		// Array of scalars - render each as paragraph
-		for _, item := range arr {
-			r.writeParagraph(formatScalar(item))
+			text := interp.resolveTextUnion(itemText)
+
+			// Pop scope
+			interp.scopeStack = interp.scopeStack[:len(interp.scopeStack)-1]
+
+			if skipEmpty && text == "" {
+				continue
+			}
+			interp.output.WriteString(bullet)
+			interp.output.WriteString(escapeMarkdown(text))
+			interp.output.WriteString("\n")
 		}
-
-	default:
-		// Complex or unknown item type - fallback
-		r.renderAsJSON(value)
+		interp.output.WriteString("\n")
 	}
 }
 
-func (r *MarkdownRenderer) renderScalar(value interface{}, schema map[string]interface{}, path string, depth int, skipTitle string, skipParagraph string) {
-	// Skip if already rendered as title or prominent paragraph
-	if path == skipTitle || path == skipParagraph {
-		return
+func (interp *DirectiveInterpreter) execSuppress(directive Directive) {
+	path, ok := directive["path"].(string)
+	if ok {
+		interp.suppressed[path] = true
 	}
-
-	r.writeParagraph(formatScalar(value))
 }
 
-func (r *MarkdownRenderer) renderAsJSON(value interface{}) {
-	jsonBytes, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		r.output.WriteString("```json\n")
-		r.output.WriteString(fmt.Sprintf("%v", value))
-		r.output.WriteString("\n```\n\n")
-		return
+// Helper functions
+
+func (interp *DirectiveInterpreter) resolveTextUnion(textUnion interface{}) string {
+	tu, ok := textUnion.(map[string]interface{})
+	if !ok {
+		return ""
 	}
-	r.output.WriteString("```json\n")
-	r.output.Write(jsonBytes)
-	r.output.WriteString("\n```\n\n")
-}
 
-func (r *MarkdownRenderer) getPropertyOrder(path string, properties map[string]interface{}, requiredFields []string) []string {
-	// Check for object_order override
-	if override, ok := r.overrides[path]; ok && override.Role == "object_order" && len(override.Order) > 0 {
-		// Start with specified order
-		ordered := make([]string, 0)
-		seen := make(map[string]bool)
+	// Literal
+	if literal, ok := tu["literal"].(string); ok {
+		return literal
+	}
 
-		for _, prop := range override.Order {
-			if _, exists := properties[prop]; exists {
-				ordered = append(ordered, prop)
-				seen[prop] = true
+	// Value
+	if valueRef, ok := tu["value"].(map[string]interface{}); ok {
+		value := interp.resolveValueReference(valueRef)
+		return interp.formatValue(value, "text")
+	}
+
+	// Schema title
+	if schemaTitle, ok := tu["schema_title"].(map[string]interface{}); ok {
+		path, _ := schemaTitle["path"].(string)
+		fallback, _ := schemaTitle["fallback"].(string)
+
+		// Look up in schema digest
+		for _, entry := range interp.schemaDigest.PathIndex {
+			if entry.Path == path && entry.Title != "" {
+				return entry.Title
 			}
 		}
-
-		// Add remaining properties using default order
-		remaining := r.getDefaultPropertyOrder(properties, requiredFields)
-		for _, prop := range remaining {
-			if !seen[prop] {
-				ordered = append(ordered, prop)
-			}
-		}
-
-		return ordered
+		return fallback
 	}
 
-	// Default ordering
-	return r.getDefaultPropertyOrder(properties, requiredFields)
+	// Concat
+	if concatArray, ok := tu["concat"].([]interface{}); ok {
+		var result strings.Builder
+		for _, part := range concatArray {
+			result.WriteString(interp.resolveTextUnion(part))
+		}
+		return result.String()
+	}
+
+	return ""
 }
 
-func (r *MarkdownRenderer) getDefaultPropertyOrder(properties map[string]interface{}, requiredFields []string) []string {
-	requiredSet := make(map[string]bool)
-	for _, f := range requiredFields {
-		requiredSet[f] = true
+func (interp *DirectiveInterpreter) resolveValueReference(valueRef map[string]interface{}) interface{} {
+	path, ok := valueRef["path"].(string)
+	if !ok {
+		return nil
 	}
 
-	var required, optional []string
-	for name := range properties {
-		if requiredSet[name] {
-			required = append(required, name)
+	from := "root"
+	if f, ok := valueRef["from"].(string); ok {
+		from = f
+	}
+
+	var baseValue interface{}
+	if from == "current" {
+		if len(interp.scopeStack) > 0 {
+			baseValue = interp.scopeStack[len(interp.scopeStack)-1]
 		} else {
-			optional = append(optional, name)
+			baseValue = interp.config.JSONInstance
 		}
+	} else {
+		baseValue = interp.config.JSONInstance
 	}
 
-	sort.Strings(required)
-	sort.Strings(optional)
-
-	return append(required, optional...)
+	return interp.getValueAtPath(baseValue, path)
 }
 
-func (r *MarkdownRenderer) getLabel(schema map[string]interface{}, propertyName string) string {
-	if title, ok := schema["title"].(string); ok && title != "" {
-		return title
-	}
-	return propertyName
-}
-
-func (r *MarkdownRenderer) getArrayItemTitle(item interface{}, index int, override *Override) string {
-	if override != nil && override.ItemTitleFrom != "" {
-		titleValue := r.getValueAtPath(item, override.ItemTitleFrom)
-		if titleValue != nil {
-			if titleStr, ok := titleValue.(string); ok && titleStr != "" {
-				return titleStr
-			}
-		}
-	}
-
-	// Use fallback
-	if override != nil && override.ItemTitleFallback != "" {
-		return strings.ReplaceAll(override.ItemTitleFallback, "{{index}}", strconv.Itoa(index+1))
-	}
-
-	return fmt.Sprintf("Item %d", index+1)
-}
-
-func (r *MarkdownRenderer) getValueAtPath(value interface{}, path string) interface{} {
-	if path == "" {
+func (interp *DirectiveInterpreter) getValueAtPath(value interface{}, path string) interface{} {
+	if path == "" || path == "." {
 		return value
 	}
 
 	// Remove leading slash
 	path = strings.TrimPrefix(path, "/")
+	if path == "" {
+		return value
+	}
+
 	parts := strings.Split(path, "/")
 
 	current := value
@@ -1419,8 +1471,134 @@ func (r *MarkdownRenderer) getValueAtPath(value interface{}, path string) interf
 	return current
 }
 
-func (r *MarkdownRenderer) clampHeadingLevel(depth int) int {
-	level := r.config.Plan.Settings.BaseHeadingLevel + depth
+func (interp *DirectiveInterpreter) formatValue(value interface{}, format string) string {
+	if value == nil {
+		nullText := "null"
+		if interp.config.Plan.Settings.NullText != "" {
+			nullText = interp.config.Plan.Settings.NullText
+		}
+		return nullText
+	}
+
+	switch format {
+	case "text":
+		return fmt.Sprintf("%v", value)
+	case "number":
+		if v, ok := value.(float64); ok {
+			if v == float64(int64(v)) {
+				return strconv.FormatInt(int64(v), 10)
+			}
+			return strconv.FormatFloat(v, 'f', -1, 64)
+		}
+		return fmt.Sprintf("%v", value)
+	case "boolean":
+		if v, ok := value.(bool); ok {
+			return strconv.FormatBool(v)
+		}
+		return fmt.Sprintf("%v", value)
+	case "json_compact":
+		bytes, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Sprintf("%v", value)
+		}
+		return string(bytes)
+	case "date", "datetime":
+		// For now, just convert to string
+		return fmt.Sprintf("%v", value)
+	default:
+		return fmt.Sprintf("%v", value)
+	}
+}
+
+func (interp *DirectiveInterpreter) applyStyle(text, style string) string {
+	switch style {
+	case "bold":
+		return "**" + text + "**"
+	case "italic":
+		return "*" + text + "*"
+	case "code_inline":
+		return "`" + text + "`"
+	default:
+		return text
+	}
+}
+
+func (interp *DirectiveInterpreter) evaluateCondition(when interface{}) bool {
+	cond, ok := when.(map[string]interface{})
+	if !ok {
+		return true
+	}
+
+	valueRef, ok := cond["value"].(map[string]interface{})
+	if !ok {
+		return true
+	}
+
+	value := interp.resolveValueReference(valueRef)
+
+	test, ok := cond["test"].(string)
+	if !ok {
+		return true
+	}
+
+	switch test {
+	case "exists":
+		return value != nil
+	case "non_null":
+		return value != nil
+	case "non_empty":
+		return interp.testPresence(value, "non_empty")
+	case "equals_literal":
+		literal := cond["literal"]
+		return fmt.Sprintf("%v", value) == fmt.Sprintf("%v", literal)
+	default:
+		return true
+	}
+}
+
+func (interp *DirectiveInterpreter) testPresence(value interface{}, mode string) bool {
+	switch mode {
+	case "exists":
+		return value != nil
+	case "non_null":
+		return value != nil
+	case "non_empty":
+		if value == nil {
+			return false
+		}
+		switch v := value.(type) {
+		case string:
+			return v != ""
+		case []interface{}:
+			return len(v) > 0
+		case map[string]interface{}:
+			return len(v) > 0
+		default:
+			return true
+		}
+	default:
+		return value != nil
+	}
+}
+
+func (interp *DirectiveInterpreter) writeHeading(level int, text string) {
+	interp.output.WriteString(strings.Repeat("#", level))
+	interp.output.WriteString(" ")
+	interp.output.WriteString(escapeMarkdown(text))
+	interp.output.WriteString("\n\n")
+}
+
+func convertToDirectives(arr []interface{}) []Directive {
+	directives := make([]Directive, 0, len(arr))
+	for _, item := range arr {
+		if d, ok := item.(map[string]interface{}); ok {
+			directives = append(directives, Directive(d))
+		}
+	}
+	return directives
+}
+
+func clampHeadingLevel(level int) int {
 	if level > 6 {
 		return 6
 	}
@@ -1430,56 +1608,19 @@ func (r *MarkdownRenderer) clampHeadingLevel(depth int) int {
 	return level
 }
 
-func (r *MarkdownRenderer) writeHeading(level int, text string) {
-	r.output.WriteString(strings.Repeat("#", level))
-	r.output.WriteString(" ")
-	r.output.WriteString(escapeMarkdown(text))
-	r.output.WriteString("\n\n")
-}
-
-func (r *MarkdownRenderer) writeParagraph(text string) {
-	r.output.WriteString(escapeMarkdown(text))
-	r.output.WriteString("\n\n")
-}
-
-func formatScalar(value interface{}) string {
-	switch v := value.(type) {
-	case string:
-		return v
-	case float64:
-		// Check if it's an integer value
-		if v == float64(int64(v)) {
-			return strconv.FormatInt(int64(v), 10)
-		}
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(v)
-	case nil:
-		return ""
-	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
-
 func escapeMarkdown(text string) string {
-	// Basic markdown escaping for text content
-	// Escape characters that have special meaning in markdown
+	// Escape characters that have special meaning in Markdown
+	// Note: Periods and hyphens don't need escaping in normal text context
+	// They only have special meaning at start of line (lists) or in specific patterns
 	replacer := strings.NewReplacer(
 		"\\", "\\\\",
 		"`", "\\`",
 		"*", "\\*",
 		"_", "\\_",
-		"{", "\\{",
-		"}", "\\}",
 		"[", "\\[",
 		"]", "\\]",
-		"(", "\\(",
-		")", "\\)",
-		"#", "\\#",
-		"+", "\\+",
-		"-", "\\-",
-		".", "\\.",
-		"!", "\\!",
+		"<", "\\<",
+		">", "\\>",
 		"|", "\\|",
 	)
 	return replacer.Replace(text)

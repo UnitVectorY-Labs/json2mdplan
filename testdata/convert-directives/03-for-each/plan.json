@@ -1,0 +1,66 @@
+{
+  "directives": [
+    {
+      "level_from_base": 0,
+      "op": "heading",
+      "text": {
+        "kind": "schema_title",
+        "schema_title": {
+          "fallback": "Items",
+          "path": "/items"
+        }
+      }
+    },
+    {
+      "op": "blank_line"
+    },
+    {
+      "array": {
+        "from": "root",
+        "path": "/items"
+      },
+      "do": [
+        {
+          "level_from_base": 1,
+          "op": "heading",
+          "text": {
+            "kind": "value",
+            "value": {
+              "from": "current",
+              "path": "/name"
+            }
+          }
+        },
+        {
+          "mode": "non_empty",
+          "op": "if_present",
+          "then": [
+            {
+              "op": "text_line",
+              "text": {
+                "kind": "value",
+                "value": {
+                  "from": "current",
+                  "path": "/description"
+                }
+              }
+            },
+            {
+              "op": "blank_line"
+            }
+          ],
+          "value": {
+            "from": "current",
+            "path": "/description"
+          }
+        }
+      ],
+      "id": "render_items",
+      "op": "for_each"
+    }
+  ],
+  "settings": {
+    "base_heading_level": 1
+  },
+  "version": 1
+}
