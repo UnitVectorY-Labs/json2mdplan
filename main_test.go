@@ -4,115 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/santhosh-tekuri/jsonschema/v5"
 )
-
-// TestConvertDirectives runs data-driven tests for the directive-based convert functionality.
-// Each subdirectory in testdata/convert-directives/ represents a test case with:
-//   - instance.json: the JSON instance to convert
-//   - schema.json: the JSON Schema
-//   - plan.json: the directive-based plan file
-//   - expected.md: the expected Markdown output
-func TestConvertDirectives(t *testing.T) {
-	testdataDir := "testdata/convert-directives"
-
-	entries, err := os.ReadDir(testdataDir)
-	if err != nil {
-		t.Fatalf("failed to read testdata directory: %v", err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		testName := entry.Name()
-		testDir := filepath.Join(testdataDir, testName)
-
-		t.Run(testName, func(t *testing.T) {
-			// Read test files
-			instanceBytes, err := os.ReadFile(filepath.Join(testDir, "instance.json"))
-			if err != nil {
-				t.Fatalf("failed to read instance.json: %v", err)
-			}
-
-			schemaBytes, err := os.ReadFile(filepath.Join(testDir, "schema.json"))
-			if err != nil {
-				t.Fatalf("failed to read schema.json: %v", err)
-			}
-
-			planBytes, err := os.ReadFile(filepath.Join(testDir, "plan.json"))
-			if err != nil {
-				t.Fatalf("failed to read plan.json: %v", err)
-			}
-
-			expectedBytes, err := os.ReadFile(filepath.Join(testDir, "expected.md"))
-			if err != nil {
-				t.Fatalf("failed to read expected.md: %v", err)
-			}
-
-			// Run conversion
-			actual, err := runConversion(instanceBytes, schemaBytes, planBytes)
-			if err != nil {
-				t.Fatalf("conversion failed: %v", err)
-			}
-
-			expected := strings.TrimSpace(string(expectedBytes))
-			actual = strings.TrimSpace(actual)
-
-			if actual != expected {
-				t.Errorf("output mismatch\n\nExpected:\n%s\n\nActual:\n%s\n\nDiff:\n%s",
-					expected, actual, diff(expected, actual))
-			}
-		})
-	}
-}
-
-// runConversion performs the JSON to Markdown conversion for testing
-func runConversion(instanceBytes, schemaBytes, planBytes []byte) (string, error) {
-	// Parse JSON instance
-	var jsonInstance interface{}
-	if err := jsonUnmarshal(instanceBytes, &jsonInstance); err != nil {
-		return "", &inputError{"invalid JSON instance: " + err.Error()}
-	}
-
-	// Parse schema
-	var schema map[string]interface{}
-	if err := jsonUnmarshal(schemaBytes, &schema); err != nil {
-		return "", &inputError{"invalid JSON schema: " + err.Error()}
-	}
-
-	// Parse plan
-	var plan Plan
-	if err := jsonUnmarshal(planBytes, &plan); err != nil {
-		return "", &inputError{"invalid plan JSON: " + err.Error()}
-	}
-
-	// Create config
-	config := &ConvertConfig{
-		JSONInstance: jsonInstance,
-		JSONBytes:    instanceBytes,
-		Schema:       schema,
-		SchemaBytes:  schemaBytes,
-		Plan:         &plan,
-		PlanBytes:    planBytes,
-		Verbose:      false,
-	}
-
-	// Convert to Markdown
-	markdown := convertToMarkdown(config)
-	return markdown, nil
-}
-
-// jsonUnmarshal is a helper to unmarshal JSON
-func jsonUnmarshal(data []byte, v interface{}) error {
-	return json.Unmarshal(data, v)
-}
 
 // diff returns a simple line-by-line diff
 func diff(expected, actual string) string {
@@ -148,201 +42,458 @@ func diff(expected, actual string) string {
 	return result.String()
 }
 
-// TestPlanValidation runs data-driven tests for plan schema validation.
-// Files in testdata/plan-validation/valid/ should pass validation.
-// Files in testdata/plan-validation/invalid/ should fail validation.
-func TestPlanValidation(t *testing.T) {
-	// Test valid plans
-	t.Run("valid", func(t *testing.T) {
-		validDir := "testdata/plan-validation/valid"
-		entries, err := os.ReadDir(validDir)
-		if err != nil {
-			t.Fatalf("failed to read valid plans directory: %v", err)
-		}
-
-		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-				continue
-			}
-
-			testName := strings.TrimSuffix(entry.Name(), ".json")
-			planPath := filepath.Join(validDir, entry.Name())
-
-			t.Run(testName, func(t *testing.T) {
-				planBytes, err := os.ReadFile(planPath)
-				if err != nil {
-					t.Fatalf("failed to read plan file: %v", err)
-				}
-
-				err = validatePlanBytes(planBytes)
-				if err != nil {
-					t.Errorf("expected valid plan, got error: %v", err)
-				}
-			})
-		}
-	})
-
-	// Test invalid plans
-	t.Run("invalid", func(t *testing.T) {
-		invalidDir := "testdata/plan-validation/invalid"
-		entries, err := os.ReadDir(invalidDir)
-		if err != nil {
-			t.Fatalf("failed to read invalid plans directory: %v", err)
-		}
-
-		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-				continue
-			}
-
-			testName := strings.TrimSuffix(entry.Name(), ".json")
-			planPath := filepath.Join(invalidDir, entry.Name())
-
-			t.Run(testName, func(t *testing.T) {
-				planBytes, err := os.ReadFile(planPath)
-				if err != nil {
-					t.Fatalf("failed to read plan file: %v", err)
-				}
-
-				err = validatePlanBytes(planBytes)
-				if err == nil {
-					t.Errorf("expected invalid plan to fail validation, but it passed")
-				}
-			})
-		}
-	})
+func mustUnmarshal(t *testing.T, data []byte, v interface{}) {
+	t.Helper()
+	if err := json.Unmarshal(data, v); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
 }
 
-// validatePlanBytes validates a plan JSON against the plan schema
-func validatePlanBytes(planBytes []byte) error {
-	var planObj interface{}
-	if err := json.Unmarshal(planBytes, &planObj); err != nil {
-		return fmt.Errorf("invalid JSON: %v", err)
-	}
-
-	compiler := jsonschema.NewCompiler()
-	compiler.Draft = jsonschema.Draft2020
-	if err := compiler.AddResource(planSchemaValidationURL, bytes.NewReader([]byte(planSchemaJSON))); err != nil {
-		return fmt.Errorf("failed to load plan schema: %v", err)
-	}
-
-	compiledSchema, err := compiler.Compile(planSchemaValidationURL)
-	if err != nil {
-		return fmt.Errorf("failed to compile plan schema: %v", err)
-	}
-
-	if err := compiledSchema.Validate(planObj); err != nil {
-		return fmt.Errorf("plan validation failed: %v", err)
-	}
-
-	return nil
-}
-
-// TestSchemaDigest tests the schema digest generation
-func TestSchemaDigest(t *testing.T) {
-	testCases := []struct {
-		name          string
-		schema        string
-		expectedPaths int
-		expectedRoot  string
+func TestKeyToLabel(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
 	}{
-		{
-			name: "simple-object",
-			schema: `{
-				"type": "object",
-				"title": "Test",
-				"properties": {
-					"name": {"type": "string"},
-					"age": {"type": "integer"}
-				}
-			}`,
-			expectedPaths: 3, // root + name + age
-			expectedRoot:  "object",
-		},
-		{
-			name: "nested-object",
-			schema: `{
-				"type": "object",
-				"properties": {
-					"person": {
-						"type": "object",
-						"properties": {
-							"name": {"type": "string"}
-						}
-					}
-				}
-			}`,
-			expectedPaths: 3, // root + person + person/name
-			expectedRoot:  "object",
-		},
-		{
-			name: "array-of-objects",
-			schema: `{
-				"type": "object",
-				"properties": {
-					"items": {
-						"type": "array",
-						"items": {
-							"type": "object",
-							"properties": {
-								"id": {"type": "string"}
-							}
-						}
-					}
-				}
-			}`,
-			expectedPaths: 4, // root + items + items[*] + items[*]/id
-			expectedRoot:  "object",
-		},
+		{"user_name", "User Name"},
+		{"first_name", "First Name"},
+		{"firstName", "First Name"},
+		{"URL", "URL"},
+		{"status", "Status"},
+		{"", ""},
+		{"camelCase", "Camel Case"},
+		{"snake_case_key", "Snake Case Key"},
+		{"API_KEY", "API_KEY"},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			var schema map[string]interface{}
-			if err := json.Unmarshal([]byte(tc.schema), &schema); err != nil {
-				t.Fatalf("failed to parse schema: %v", err)
-			}
-
-			digest := generateSchemaDigest(schema)
-
-			if digest.RootType != tc.expectedRoot {
-				t.Errorf("expected root type %q, got %q", tc.expectedRoot, digest.RootType)
-			}
-
-			if len(digest.PathIndex) != tc.expectedPaths {
-				t.Errorf("expected %d paths, got %d", tc.expectedPaths, len(digest.PathIndex))
-				for i, p := range digest.PathIndex {
-					t.Logf("  path[%d]: %s (type: %s)", i, p.Path, p.Type)
-				}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := keyToLabel(tt.input)
+			if got != tt.expected {
+				t.Errorf("keyToLabel(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}
 }
 
-// TestSchemaFingerprint tests the deterministic fingerprint generation
-func TestSchemaFingerprint(t *testing.T) {
-	// Same schema with different whitespace/ordering should produce same fingerprint
-	schema1 := `{"type":"object","properties":{"a":{"type":"string"},"b":{"type":"integer"}}}`
-	schema2 := `{
-		"properties": {
-			"b": {"type": "integer"},
-			"a": {"type": "string"}
+func TestGenerateTemplate(t *testing.T) {
+	input := `{
+		"title": "My Project",
+		"status": "active",
+		"tags": ["go", "cli"],
+		"metadata": {
+			"version": "1.0"
 		},
-		"type": "object"
+		"contributors": [
+			{"name": "Alice", "role": "lead"},
+			{"name": "Bob", "role": "dev"}
+		],
+		"phases": [
+			{"name": "Phase 1", "tasks": [{"id": 1}]}
+		]
 	}`
 
-	fp1 := calculateFingerprint([]byte(schema1))
-	fp2 := calculateFingerprint([]byte(schema2))
-
-	if fp1 != fp2 {
-		t.Errorf("expected same fingerprint for equivalent schemas\n  schema1: %s\n  schema2: %s", fp1, fp2)
+	var data interface{}
+	if err := json.Unmarshal([]byte(input), &data); err != nil {
+		t.Fatalf("failed to parse input: %v", err)
 	}
 
-	// Different schema should produce different fingerprint
-	schema3 := `{"type":"object","properties":{"c":{"type":"string"}}}`
-	fp3 := calculateFingerprint([]byte(schema3))
+	tmpl := generateTemplate(data)
 
-	if fp1 == fp3 {
-		t.Errorf("expected different fingerprint for different schemas")
+	if tmpl.Version != "1" {
+		t.Errorf("expected version '1', got %q", tmpl.Version)
+	}
+	if tmpl.Template == nil {
+		t.Fatal("expected non-nil template")
+	}
+	if tmpl.Template.Render != "inline" {
+		t.Errorf("expected root render 'inline', got %q", tmpl.Template.Render)
+	}
+
+	// tags should be bullet_list
+	if tags, ok := tmpl.Template.Properties["tags"]; ok {
+		if tags.Render != "bullet_list" {
+			t.Errorf("expected tags render 'bullet_list', got %q", tags.Render)
+		}
+	} else {
+		t.Error("expected 'tags' property in template")
+	}
+
+	// contributors (flat objects) should be table
+	if contrib, ok := tmpl.Template.Properties["contributors"]; ok {
+		if contrib.Render != "table" {
+			t.Errorf("expected contributors render 'table', got %q", contrib.Render)
+		}
+	} else {
+		t.Error("expected 'contributors' property in template")
+	}
+
+	// phases (complex objects) should be sections
+	if phases, ok := tmpl.Template.Properties["phases"]; ok {
+		if phases.Render != "sections" {
+			t.Errorf("expected phases render 'sections', got %q", phases.Render)
+		}
+		if phases.Items != nil && phases.Items.TitleKey != "name" {
+			t.Errorf("expected phases title_key 'name', got %q", phases.Items.TitleKey)
+		}
+	} else {
+		t.Error("expected 'phases' property in template")
+	}
+}
+
+func TestConvertSimpleObject(t *testing.T) {
+	input := `{"title": "Hello", "status": "active"}`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "inline",
+			"order": ["title", "status"],
+			"properties": {
+				"title": {"render": "labeled_value", "label": "Title"},
+				"status": {"render": "labeled_value", "label": "Status"}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	expected := "- **Title**: Hello\n- **Status**: active\n"
+	if result != expected {
+		t.Errorf("output mismatch\nExpected:\n%q\nActual:\n%q\nDiff:\n%s", expected, result, diff(expected, result))
+	}
+}
+
+func TestConvertTable(t *testing.T) {
+	input := `[
+		{"name": "Alice", "role": "lead"},
+		{"name": "Bob", "role": "dev"}
+	]`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "table",
+			"items": {
+				"order": ["name", "role"],
+				"properties": {
+					"name": {"label": "Name"},
+					"role": {"label": "Role"}
+				}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	expected := "| Name | Role |\n| --- | --- |\n| Alice | lead |\n| Bob | dev |\n"
+	if result != expected {
+		t.Errorf("output mismatch\nExpected:\n%q\nActual:\n%q\nDiff:\n%s", expected, result, diff(expected, result))
+	}
+}
+
+func TestConvertSections(t *testing.T) {
+	input := `{
+		"phases": [
+			{"name": "Phase 1", "status": "done"},
+			{"name": "Phase 2", "status": "pending"}
+		]
+	}`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "inline",
+			"order": ["phases"],
+			"properties": {
+				"phases": {
+					"render": "sections",
+					"title": "Phases",
+					"items": {
+						"render": "inline",
+						"title_key": "name",
+						"order": ["name", "status"],
+						"properties": {
+							"name": {"render": "labeled_value", "label": "Name"},
+							"status": {"render": "labeled_value", "label": "Status"}
+						}
+					}
+				}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	// Phases has a title so sub-items are at level+1
+	if !strings.Contains(result, "# Phases") {
+		t.Error("expected '# Phases' heading")
+	}
+	if !strings.Contains(result, "## Phase 1") {
+		t.Error("expected '## Phase 1' heading")
+	}
+	if !strings.Contains(result, "## Phase 2") {
+		t.Error("expected '## Phase 2' heading")
+	}
+	// name should be skipped (title_key)
+	if strings.Contains(result, "**Name**") {
+		t.Error("title_key 'name' should not appear as labeled value")
+	}
+	if !strings.Contains(result, "**Status**: done") {
+		t.Error("expected status labeled value for Phase 1")
+	}
+}
+
+func TestConvertBulletList(t *testing.T) {
+	input := `{"tags": ["go", "cli", "tool"]}`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "inline",
+			"properties": {
+				"tags": {
+					"render": "bullet_list",
+					"title": "Tags"
+				}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	if !strings.Contains(result, "## Tags") {
+		t.Error("expected '## Tags' heading")
+	}
+	if !strings.Contains(result, "- go\n") {
+		t.Error("expected '- go' bullet")
+	}
+}
+
+func TestConvertHidden(t *testing.T) {
+	input := `{"visible": "yes", "secret": "no"}`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "inline",
+			"properties": {
+				"visible": {"render": "labeled_value", "label": "Visible"},
+				"secret": {"render": "hidden"}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	if !strings.Contains(result, "Visible") {
+		t.Error("expected 'Visible' in output")
+	}
+	if strings.Contains(result, "secret") || strings.Contains(result, "no") {
+		t.Error("hidden field should not appear in output")
+	}
+}
+
+func TestConvertText(t *testing.T) {
+	input := `{"description": "A great project"}`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "inline",
+			"properties": {
+				"description": {"render": "text"}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	if !strings.Contains(result, "A great project\n") {
+		t.Errorf("expected text paragraph, got %q", result)
+	}
+}
+
+func TestConvertHeading(t *testing.T) {
+	input := `{"title": "My Document"}`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "inline",
+			"properties": {
+				"title": {"render": "heading"}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	if !strings.Contains(result, "## My Document\n") {
+		t.Errorf("expected heading, got %q", result)
+	}
+}
+
+func TestRunCLI(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		wantCode int
+	}{
+		{"no mode", []string{}, 2},
+		{"conflicting modes", []string{"--generate", "--convert"}, 2},
+		{"convert without template", []string{"--convert"}, 2},
+		{"version", []string{"--version"}, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := run(tt.args, strings.NewReader(""), &stdout, &stderr)
+			if code != tt.wantCode {
+				t.Errorf("expected exit code %d, got %d (stderr: %s)", tt.wantCode, code, stderr.String())
+			}
+		})
+	}
+}
+
+func TestFormatScalar(t *testing.T) {
+	tests := []struct {
+		input    interface{}
+		expected string
+	}{
+		{"hello", "hello"},
+		{float64(42), "42"},
+		{float64(3.14), "3.14"},
+		{true, "true"},
+		{false, "false"},
+		{nil, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%v", tt.input), func(t *testing.T) {
+			got := formatScalar(tt.input)
+			if got != tt.expected {
+				t.Errorf("formatScalar(%v) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestNullValuesSkipped(t *testing.T) {
+	input := `{"name": "Alice", "email": null}`
+	tmplJSON := `{
+		"version": "1",
+		"template": {
+			"render": "inline",
+			"order": ["name", "email"],
+			"properties": {
+				"name": {"render": "labeled_value", "label": "Name"},
+				"email": {"render": "labeled_value", "label": "Email"}
+			}
+		}
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	var tmplFile TemplateFile
+	mustUnmarshal(t, []byte(tmplJSON), &tmplFile)
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	if strings.Contains(result, "Email") {
+		t.Error("null values should be skipped")
+	}
+	if !strings.Contains(result, "**Name**: Alice") {
+		t.Error("expected Name labeled value")
+	}
+}
+
+func TestEscapeTableCell(t *testing.T) {
+	if escapeTableCell("a|b") != "a\\|b" {
+		t.Error("expected pipe to be escaped")
+	}
+	if escapeTableCell("normal") != "normal" {
+		t.Error("expected no change for normal text")
+	}
+}
+
+func TestGenerateRoundTrip(t *testing.T) {
+	// Generate a template from data, then use it to convert the same data
+	input := `{
+		"title": "Test",
+		"items": [
+			{"name": "A", "value": 1},
+			{"name": "B", "value": 2}
+		]
+	}`
+
+	var data interface{}
+	mustUnmarshal(t, []byte(input), &data)
+
+	tmpl := generateTemplate(data)
+
+	// Verify we can marshal/unmarshal the template
+	tmplBytes, err := json.Marshal(tmpl)
+	if err != nil {
+		t.Fatalf("failed to marshal template: %v", err)
+	}
+
+	var tmplFile TemplateFile
+	if err := json.Unmarshal(tmplBytes, &tmplFile); err != nil {
+		t.Fatalf("failed to unmarshal template: %v", err)
+	}
+
+	conv := newConverter(false)
+	result := conv.convert(data, tmplFile.Template)
+
+	if result == "" {
+		t.Error("expected non-empty output from round trip")
+	}
+	if !strings.Contains(result, "Test") {
+		t.Error("expected 'Test' in output")
 	}
 }
