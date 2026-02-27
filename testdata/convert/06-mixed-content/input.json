@@ -1,0 +1,33 @@
+{
+  "title": "Quarterly Report",
+  "summary": "This report covers Q4 2024 performance metrics.",
+  "metadata": {
+    "author": "Jane Smith",
+    "date": "2024-12-31",
+    "department": "Engineering"
+  },
+  "highlights": [
+    "Revenue increased by 25%",
+    "Customer satisfaction at 95%",
+    "Three new products launched"
+  ],
+  "team_members": [
+    {"name": "Alice", "role": "Manager"},
+    {"name": "Bob", "role": "Engineer"},
+    {"name": "Carol", "role": "Designer"}
+  ],
+  "recommendations": [
+    {
+      "id": "R1",
+      "title": "Expand hiring",
+      "priority": "high",
+      "details": "Increase headcount by 20% to meet demand."
+    },
+    {
+      "id": "R2",
+      "title": "Upgrade infrastructure",
+      "priority": "medium",
+      "details": "Migrate to cloud-native architecture."
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": [
+      "people"
+    ],
+    "properties": {
+      "people": {
+        "render": "table",
+        "label": "People",
+        "items": {
+          "order": [
+            "name",
+            "role"
+          ],
+          "properties": {
+            "name": {
+              "render": "labeled_value",
+              "label": "Name"
+            },
+            "role": {
+              "render": "labeled_value",
+              "label": "Role"
+            }
+          }
+        }
+      }
+    }
+  }
+}

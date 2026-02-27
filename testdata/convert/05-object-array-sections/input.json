@@ -1,0 +1,14 @@
+{
+  "projects": [
+    {
+      "name": "Alpha",
+      "description": "First project",
+      "tags": ["web", "api"]
+    },
+    {
+      "name": "Beta",
+      "description": "Second project",
+      "tags": ["mobile", "ios"]
+    }
+  ]
+}

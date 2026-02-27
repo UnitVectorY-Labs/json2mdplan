@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": [
+      "tags",
+      "title"
+    ],
+    "properties": {
+      "tags": {
+        "render": "bullet_list",
+        "label": "Tags"
+      },
+      "title": {
+        "render": "labeled_value",
+        "label": "Title"
+      }
+    }
+  }
+}

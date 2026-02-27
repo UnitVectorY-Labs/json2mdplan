@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -496,4 +498,173 @@ func TestGenerateRoundTrip(t *testing.T) {
 	if !strings.Contains(result, "Test") {
 		t.Error("expected 'Test' in output")
 	}
+}
+
+// ──────────────────────────────────────────────
+// Data-Driven Tests
+// ──────────────────────────────────────────────
+
+func TestConvertDataDriven(t *testing.T) {
+	dirs, err := filepath.Glob("testdata/convert/*")
+	if err != nil {
+		t.Fatalf("failed to glob test dirs: %v", err)
+	}
+	if len(dirs) == 0 {
+		t.Fatal("no test cases found in testdata/convert/")
+	}
+
+	for _, dir := range dirs {
+		name := filepath.Base(dir)
+		t.Run(name, func(t *testing.T) {
+			inputData, err := os.ReadFile(filepath.Join(dir, "input.json"))
+			if err != nil {
+				t.Fatalf("failed to read input.json: %v", err)
+			}
+			tmplData, err := os.ReadFile(filepath.Join(dir, "template.json"))
+			if err != nil {
+				t.Fatalf("failed to read template.json: %v", err)
+			}
+			expectedData, err := os.ReadFile(filepath.Join(dir, "expected.md"))
+			if err != nil {
+				t.Fatalf("failed to read expected.md: %v", err)
+			}
+
+			var parsed interface{}
+			mustUnmarshal(t, inputData, &parsed)
+
+			var tmplFile TemplateFile
+			mustUnmarshal(t, tmplData, &tmplFile)
+
+			if tmplFile.Template == nil {
+				t.Fatal("template is nil")
+			}
+
+			conv := newConverter(false)
+			actual := conv.convert(parsed, tmplFile.Template)
+			expected := string(expectedData)
+
+			if actual != expected {
+				t.Errorf("output mismatch\nExpected:\n%s\nActual:\n%s\nDiff:\n%s", expected, actual, diff(expected, actual))
+			}
+		})
+	}
+}
+
+func TestGenerateDataDriven(t *testing.T) {
+	dirs, err := filepath.Glob("testdata/generate/*")
+	if err != nil {
+		t.Fatalf("failed to glob test dirs: %v", err)
+	}
+	if len(dirs) == 0 {
+		t.Fatal("no test cases found in testdata/generate/")
+	}
+
+	for _, dir := range dirs {
+		name := filepath.Base(dir)
+		t.Run(name, func(t *testing.T) {
+			inputData, err := os.ReadFile(filepath.Join(dir, "input.json"))
+			if err != nil {
+				t.Fatalf("failed to read input.json: %v", err)
+			}
+			expectedTmplData, err := os.ReadFile(filepath.Join(dir, "expected-template.json"))
+			if err != nil {
+				t.Fatalf("failed to read expected-template.json: %v", err)
+			}
+
+			var parsed interface{}
+			mustUnmarshal(t, inputData, &parsed)
+
+			generated := generateTemplate(parsed)
+			generatedJSON, err := json.MarshalIndent(generated, "", "  ")
+			if err != nil {
+				t.Fatalf("failed to marshal generated template: %v", err)
+			}
+
+			// Normalize both by re-parsing and re-marshaling
+			var expectedObj, actualObj interface{}
+			mustUnmarshal(t, expectedTmplData, &expectedObj)
+			mustUnmarshal(t, generatedJSON, &actualObj)
+
+			expectedNorm, _ := json.MarshalIndent(expectedObj, "", "  ")
+			actualNorm, _ := json.MarshalIndent(actualObj, "", "  ")
+
+			if string(expectedNorm) != string(actualNorm) {
+				t.Errorf("template mismatch\nExpected:\n%s\nActual:\n%s", string(expectedNorm), string(actualNorm))
+			}
+		})
+	}
+}
+
+func TestTemplateValidation(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		files, err := filepath.Glob("testdata/template-validation/valid/*.json")
+		if err != nil {
+			t.Fatalf("failed to glob valid templates: %v", err)
+		}
+		if len(files) == 0 {
+			t.Fatal("no valid template files found")
+		}
+
+		for _, file := range files {
+			name := filepath.Base(file)
+			t.Run(name, func(t *testing.T) {
+				data, err := os.ReadFile(file)
+				if err != nil {
+					t.Fatalf("failed to read file: %v", err)
+				}
+
+				var tmplFile TemplateFile
+				if err := json.Unmarshal(data, &tmplFile); err != nil {
+					t.Fatalf("valid template failed to parse: %v", err)
+				}
+
+				if tmplFile.Version != "1" {
+					t.Errorf("expected version '1', got %q", tmplFile.Version)
+				}
+				if tmplFile.Template == nil {
+					t.Error("expected non-nil template")
+				}
+			})
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		files, err := filepath.Glob("testdata/template-validation/invalid/*.json")
+		if err != nil {
+			t.Fatalf("failed to glob invalid templates: %v", err)
+		}
+		if len(files) == 0 {
+			t.Fatal("no invalid template files found")
+		}
+
+		for _, file := range files {
+			name := filepath.Base(file)
+			t.Run(name, func(t *testing.T) {
+				data, err := os.ReadFile(file)
+				if err != nil {
+					t.Fatalf("failed to read file: %v", err)
+				}
+
+				// Run through the same validation as runConvert
+				var tmplFile TemplateFile
+				if err := json.Unmarshal(data, &tmplFile); err != nil {
+					// Invalid JSON is also a failure
+					return
+				}
+
+				// Check validation conditions that runConvert checks
+				hasError := false
+				if tmplFile.Version != "1" {
+					hasError = true
+				}
+				if tmplFile.Template == nil {
+					hasError = true
+				}
+
+				if !hasError {
+					t.Errorf("expected template %s to fail validation, but it passed", name)
+				}
+			})
+		}
+	})
 }

@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["name", "age", "active"],
+    "properties": {
+      "name": {"render": "labeled_value", "label": "Name"},
+      "age": {"render": "labeled_value", "label": "Age"},
+      "active": {"render": "labeled_value", "label": "Active"}
+    }
+  }
+}

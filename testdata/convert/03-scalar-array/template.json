@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["project", "features"],
+    "properties": {
+      "project": {"render": "labeled_value", "label": "Project"},
+      "features": {"render": "bullet_list", "title": "Features"}
+    }
+  }
+}

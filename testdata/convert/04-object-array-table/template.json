@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "properties": {
+      "team": {
+        "render": "table",
+        "title": "Team",
+        "items": {
+          "order": ["name", "role", "experience"],
+          "properties": {
+            "name": {"label": "Name"},
+            "role": {"label": "Role"},
+            "experience": {"label": "Experience"}
+          }
+        }
+      }
+    }
+  }
+}

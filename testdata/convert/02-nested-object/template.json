@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["title", "metadata"],
+    "properties": {
+      "title": {"render": "heading"},
+      "metadata": {
+        "render": "section",
+        "title": "Metadata",
+        "order": ["author", "date", "version"],
+        "properties": {
+          "author": {"render": "labeled_value", "label": "Author"},
+          "date": {"render": "labeled_value", "label": "Date"},
+          "version": {"render": "labeled_value", "label": "Version"}
+        }
+      }
+    }
+  }
+}

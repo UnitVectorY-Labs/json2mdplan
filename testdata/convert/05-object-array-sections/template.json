@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "properties": {
+      "projects": {
+        "render": "sections",
+        "title": "Projects",
+        "items": {
+          "render": "inline",
+          "title_key": "name",
+          "order": ["name", "description", "tags"],
+          "properties": {
+            "name": {"render": "labeled_value", "label": "Name"},
+            "description": {"render": "text"},
+            "tags": {"render": "bullet_list", "title": "Tags"}
+          }
+        }
+      }
+    }
+  }
+}

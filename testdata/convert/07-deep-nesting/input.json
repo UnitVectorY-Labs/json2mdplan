@@ -1,0 +1,22 @@
+{
+  "company": {
+    "name": "Acme Corp",
+    "divisions": [
+      {
+        "name": "Engineering",
+        "teams": [
+          {
+            "name": "Frontend",
+            "lead": "Alice",
+            "members": ["Bob", "Carol"]
+          },
+          {
+            "name": "Backend",
+            "lead": "Dave",
+            "members": ["Eve", "Frank"]
+          }
+        ]
+      }
+    ]
+  }
+}

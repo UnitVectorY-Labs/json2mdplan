@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "template": {
+    "render": "table",
+    "title": "Cities",
+    "items": {
+      "order": ["city", "population"],
+      "properties": {
+        "city": {"label": "City"},
+        "population": {"label": "Population"}
+      }
+    }
+  }
+}

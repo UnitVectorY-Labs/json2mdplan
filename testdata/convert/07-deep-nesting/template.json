@@ -1,0 +1,42 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "properties": {
+      "company": {
+        "render": "section",
+        "title": "Company",
+        "order": ["name", "divisions"],
+        "properties": {
+          "name": {"render": "heading"},
+          "divisions": {
+            "render": "sections",
+            "title": "Divisions",
+            "items": {
+              "render": "inline",
+              "title_key": "name",
+              "order": ["name", "teams"],
+              "properties": {
+                "name": {"render": "labeled_value", "label": "Name"},
+                "teams": {
+                  "render": "sections",
+                  "title": "Teams",
+                  "items": {
+                    "render": "inline",
+                    "title_key": "name",
+                    "order": ["name", "lead", "members"],
+                    "properties": {
+                      "name": {"render": "labeled_value", "label": "Name"},
+                      "lead": {"render": "labeled_value", "label": "Lead"},
+                      "members": {"render": "bullet_list", "title": "Members"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

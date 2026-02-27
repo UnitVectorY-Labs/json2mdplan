@@ -1,0 +1,25 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["title", "summary", "items"],
+    "properties": {
+      "title": {"render": "heading"},
+      "summary": {"render": "text"},
+      "items": {
+        "render": "sections",
+        "title": "Items",
+        "items": {
+          "render": "inline",
+          "title_key": "name",
+          "order": ["name", "status", "tags"],
+          "properties": {
+            "name": {"render": "labeled_value", "label": "Name"},
+            "status": {"render": "labeled_value", "label": "Status"},
+            "tags": {"render": "bullet_list", "title": "Tags"}
+          }
+        }
+      }
+    }
+  }
+}

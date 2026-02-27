@@ -1,0 +1,50 @@
+{
+  "version": "1",
+  "template": {
+    "render": "inline",
+    "order": ["title", "summary", "metadata", "highlights", "team_members", "recommendations"],
+    "properties": {
+      "title": {"render": "heading"},
+      "summary": {"render": "text"},
+      "metadata": {
+        "render": "section",
+        "title": "Metadata",
+        "order": ["author", "date", "department"],
+        "properties": {
+          "author": {"render": "labeled_value", "label": "Author"},
+          "date": {"render": "labeled_value", "label": "Date"},
+          "department": {"render": "labeled_value", "label": "Department"}
+        }
+      },
+      "highlights": {
+        "render": "bullet_list",
+        "title": "Highlights"
+      },
+      "team_members": {
+        "render": "table",
+        "title": "Team Members",
+        "items": {
+          "order": ["name", "role"],
+          "properties": {
+            "name": {"label": "Name"},
+            "role": {"label": "Role"}
+          }
+        }
+      },
+      "recommendations": {
+        "render": "sections",
+        "title": "Recommendations",
+        "items": {
+          "render": "inline",
+          "title_key": "title",
+          "order": ["id", "title", "priority", "details"],
+          "properties": {
+            "id": {"render": "labeled_value", "label": "ID"},
+            "priority": {"render": "labeled_value", "label": "Priority"},
+            "details": {"render": "text"}
+          }
+        }
+      }
+    }
+  }
+}
