@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "directives": [
+    {
+      "op": "table",
+      "path": ".",
+      "fields": [
+        {
+          "path": "name",
+          "label": "name"
+        },
+        {
+          "path": "city",
+          "label": "city"
+        }
+      ]
+    }
+  ]
+}
