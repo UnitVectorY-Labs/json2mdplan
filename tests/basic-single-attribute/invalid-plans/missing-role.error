@@ -1,0 +1,4 @@
+code=missing_field
+directive=0
+path=role
+message=field path "role" does not exist relative to "."

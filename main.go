@@ -2,7 +2,11 @@ package main
 
 import (
 	_ "embed"
+	"fmt"
+	"os"
 	"runtime/debug"
+
+	"github.com/UnitVectorY-Labs/json2mdplan/internal/app"
 )
 
 var Version = "dev" // This will be set by the build system to the release version
@@ -16,5 +20,9 @@ func main() {
 			}
 		}
 	}
-	// TODO: Implement everything
+
+	if err := app.Run(os.Args[1:], os.Stdin, os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

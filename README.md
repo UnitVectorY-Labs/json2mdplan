@@ -2,17 +2,18 @@
 
 # json2mdplan
 
-Unix-style CLI that extracts structure-only JSON, uses Vertex AI (Gemini) structured outputs to generate a schema-validated Markdown plan, then renders Markdown locally from the original JSON without sending raw values to the model.
+Unix-style CLI that generates a Markdown rendering plan from JSON and then uses
+that plan to deterministically render Markdown from the same JSON input.
 
 ## Overview
 
 `json2mdplan` is designed for converting JSON documents to human-readable Markdown:
 
-- Generate a rendering plan from a JSON Schema using Gemini, keeping your raw data private
-- Convert JSON instances to Markdown deterministically without any LLM calls
-- Enforce output structure using a validated Plan JSON Schema
-- Enable repeatable, inspectable document generation from the command line
-- Support shell pipelines, scripts, and batch processing workflows
+- Generate a baseline `plan.json` from JSON input
+- Validate that a plan covers all scalar content in the input JSON
+- Render Markdown deterministically from JSON and a plan
+- Support hand-edited plans and alternative valid plans
+- Use data-driven fixtures under `tests/` to catch regressions
 
 ## Installation
 
@@ -27,3 +28,10 @@ git clone https://github.com/UnitVectorY-Labs/json2mdplan.git
 cd json2mdplan
 go build -o json2mdplan
 ```
+
+## Commands
+
+- `json2mdplan plan` reads JSON and emits a baseline plan
+- `json2mdplan render` reads JSON plus a plan and emits Markdown
+
+See [docs/USAGE.md](docs/USAGE.md) for the planned CLI contract.

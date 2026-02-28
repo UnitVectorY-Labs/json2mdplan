@@ -1,0 +1,4 @@
+code=missing_field
+directive=0
+path=sku
+message=field path "sku" does not exist relative to "."

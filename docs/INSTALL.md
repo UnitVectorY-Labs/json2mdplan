@@ -31,27 +31,7 @@ cd json2mdplan
 go build -o json2mdplan
 ```
 
-## Authentication
+## Requirements
 
-`json2mdplan` requires Google Cloud credentials to access Gemini models for the `--plan` mode. The `--convert` mode does not require any authentication.
-
-{: .important }
-You will be charged for usage of Gemini models according to [Google Cloud's pricing](https://cloud.google.com/vertex-ai/pricing#generative_ai_models).
-
-Authenticate locally:
-
-```bash
-gcloud auth application-default login
-```
-
-Or use a service account:
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-```
-
-Set your project (can be specified with `--project` flag as well):
-
-```bash
-export GOOGLE_CLOUD_PROJECT=your-project-id
-```
+V1 has no external service dependencies. The current implementation uses only
+local JSON input, local plans, and local rendering.
