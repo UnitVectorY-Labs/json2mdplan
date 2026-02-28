@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "directives": [
+    {
+      "op": "named_bullets",
+      "path": ".",
+      "fields": [
+        {
+          "path": "price",
+          "label": "price"
+        },
+        {
+          "path": "count",
+          "label": "count"
+        },
+        {
+          "path": "name",
+          "label": "name"
+        }
+      ]
+    }
+  ]
+}

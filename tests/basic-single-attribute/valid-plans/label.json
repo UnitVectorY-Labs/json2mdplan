@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "directives": [
+    {
+      "op": "named_bullets",
+      "path": ".",
+      "fields": [
+        {
+          "path": "name",
+          "label": "Name"
+        }
+      ]
+    }
+  ]
+}

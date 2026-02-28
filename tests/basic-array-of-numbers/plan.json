@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "directives": [
+    {
+      "op": "bullet_list",
+      "path": "."
+    }
+  ]
+}
