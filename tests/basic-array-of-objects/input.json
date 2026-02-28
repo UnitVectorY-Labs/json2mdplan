@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Alice",
+    "role": "Engineer",
+    "city": "Boston"
+  },
+  {
+    "name": "Bob",
+    "role": "Designer",
+    "city": "Seattle"
+  },
+  {
+    "name": "Charlie",
+    "role": "Manager",
+    "city": "Denver"
+  }
+]

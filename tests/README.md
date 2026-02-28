@@ -145,6 +145,26 @@ For top-level arrays of scalar values, the current draft operator is:
 }
 ```
 
+For top-level arrays of flat objects, the current draft operator is:
+
+```json
+{
+  "version": 1,
+  "directives": [
+    {
+      "op": "table",
+      "path": ".",
+      "fields": [
+        {
+          "path": "name",
+          "label": "name"
+        }
+      ]
+    }
+  ]
+}
+```
+
 This is intentionally narrow. It only covers the simple cases currently present
 in the test suite.
 
@@ -155,6 +175,8 @@ The first agreed Markdown conventions are:
 - A flat JSON object with scalar fields renders as a bullet list.
 - Each field renders as `- **field-name:** value`.
 - A top-level array of scalar values renders as a plain bullet list.
+- A top-level array of flat objects (all scalar fields) renders as a Markdown
+  table.
 
 Examples:
 
@@ -188,6 +210,30 @@ renders as:
 - red
 - green
 - blue
+```
+
+And:
+
+```json
+[
+  {
+    "name": "Alice",
+    "role": "Engineer"
+  },
+  {
+    "name": "Bob",
+    "role": "Designer"
+  }
+]
+```
+
+renders as:
+
+```md
+| name | role |
+| --- | --- |
+| Alice | Engineer |
+| Bob | Designer |
 ```
 
 ## Design Intent
