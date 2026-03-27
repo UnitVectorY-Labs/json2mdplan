@@ -1,0 +1,12 @@
+[
+  {
+    "item": "Widget",
+    "quantity": 10,
+    "price": 2.5
+  },
+  {
+    "item": "Gadget",
+    "quantity": 5,
+    "price": 7.99
+  }
+]
