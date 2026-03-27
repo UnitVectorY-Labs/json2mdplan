@@ -1,7 +1,7 @@
 title: json2mdplan
-description: "Unix-style CLI that generates a Markdown plan from JSON and then renders Markdown deterministically from JSON plus that plan."
+description: "Unix-style CLI that generates a Markdown rendering plan from JSON and then uses that plan to deterministically render Markdown from the same JSON input."
 
-remote_theme: just-the-docs/just-the-docs@v0.10.2
+remote_theme: just-the-docs/just-the-docs@v0.12.0
 plugins:
   - jekyll-remote-theme
 
@@ -20,6 +20,11 @@ callouts:
   warning:
     title: Warning
     color: red
+
+mermaid:
+  # Version of mermaid library
+  # Pick an available version from https://cdn.jsdelivr.net/npm/mermaid/
+  version: "11.12.3" # MERMAIDVERSION
 
 # External navigation links
 nav_external_links:

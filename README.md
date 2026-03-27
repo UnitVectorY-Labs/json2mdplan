@@ -2,8 +2,7 @@
 
 # json2mdplan
 
-Unix-style CLI that generates a Markdown rendering plan from JSON and then uses
-that plan to deterministically render Markdown from the same JSON input.
+Unix-style CLI that generates a Markdown rendering plan from JSON and then uses that plan to deterministically render Markdown from the same JSON input.
 
 ## Overview
 

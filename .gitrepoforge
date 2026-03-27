@@ -1,0 +1,12 @@
+name: json2mdplan
+default_branch: main
+config:
+  description: "Unix-style CLI that generates a Markdown rendering plan from JSON and then uses that plan to deterministically render Markdown from the same JSON input."
+  license: MIT
+  language: go
+  release: release-go
+  justfile: true
+  codecov: false
+  docs:
+    enabled: true
+    domain: json2mdplan.unitvectorylabs.com
