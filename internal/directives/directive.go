@@ -20,6 +20,7 @@ type Handler interface {
 var handlers = map[string]Handler{
 	"bullet_list":   bulletListHandler{},
 	"named_bullets": namedBulletsHandler{},
+	"table":         tableHandler{},
 }
 
 func Execute(root *jsondoc.Node, directiveIndex int, directive plan.Directive) (*Result, error) {

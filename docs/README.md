@@ -22,3 +22,4 @@ See:
 - [Installation](install.html)
 - [Examples](examples.html)
 - [Directive Reference](directives/named_bullets.html)
+- [Table Directive](directives/table.html)

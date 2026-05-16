@@ -1,0 +1,4 @@
+code=missing_coverage
+directive=-1
+path=/0/role
+message=plan does not cover JSON path "/0/role"
