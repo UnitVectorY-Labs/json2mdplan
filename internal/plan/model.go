@@ -1,9 +1,8 @@
 package plan
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 )
 
 type Plan struct {
@@ -23,17 +22,8 @@ type Field struct {
 }
 
 func Parse(data []byte) (*Plan, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-
 	var parsed Plan
-	if err := dec.Decode(&parsed); err != nil {
-		return nil, err
-	}
-	if _, err := dec.Token(); err != io.EOF {
-		if err == nil {
-			return nil, io.ErrUnexpectedEOF
-		}
+	if err := json.Unmarshal(data, &parsed, json.RejectUnknownMembers(true)); err != nil {
 		return nil, err
 	}
 
@@ -41,5 +31,5 @@ func Parse(data []byte) (*Plan, error) {
 }
 
 func Marshal(pretty Plan) ([]byte, error) {
-	return json.MarshalIndent(pretty, "", "  ")
+	return json.Marshal(pretty, jsontext.WithIndent("  "))
 }
