@@ -2,7 +2,7 @@ package jsondoc
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"io"
 	"strconv"
@@ -35,95 +35,69 @@ type Field struct {
 }
 
 func Parse(data []byte) (*Node, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
+	dec := jsontext.NewDecoder(bytes.NewReader(data))
 
 	node, err := parseValue(dec)
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err := dec.Token(); err != io.EOF {
+	if _, err := dec.ReadToken(); err != io.EOF {
 		if err == nil {
 			return nil, fmt.Errorf("unexpected trailing JSON content")
 		}
 		return nil, err
 	}
-
 	return node, nil
 }
 
-func parseValue(dec *json.Decoder) (*Node, error) {
-	tok, err := dec.Token()
+func parseValue(dec *jsontext.Decoder) (*Node, error) {
+	tok, err := dec.ReadToken()
 	if err != nil {
 		return nil, err
 	}
 
-	switch v := tok.(type) {
-	case json.Delim:
-		switch v {
-		case '{':
-			fields := make([]Field, 0)
-			for dec.More() {
-				keyTok, err := dec.Token()
-				if err != nil {
-					return nil, err
-				}
-
-				key, ok := keyTok.(string)
-				if !ok {
-					return nil, fmt.Errorf("object key must be a string")
-				}
-
-				value, err := parseValue(dec)
-				if err != nil {
-					return nil, err
-				}
-
-				fields = append(fields, Field{Name: key, Value: value})
-			}
-
-			endTok, err := dec.Token()
+	switch tok.Kind() {
+	case '{':
+		fields := make([]Field, 0)
+		for dec.PeekKind() != '}' {
+			key, err := dec.ReadToken()
 			if err != nil {
 				return nil, err
 			}
-			if endTok != json.Delim('}') {
-				return nil, fmt.Errorf("expected object end")
-			}
-
-			return &Node{Kind: Object, Object: fields}, nil
-		case '[':
-			items := make([]*Node, 0)
-			for dec.More() {
-				item, err := parseValue(dec)
-				if err != nil {
-					return nil, err
-				}
-				items = append(items, item)
-			}
-
-			endTok, err := dec.Token()
+			name := key.String()
+			value, err := parseValue(dec)
 			if err != nil {
 				return nil, err
 			}
-			if endTok != json.Delim(']') {
-				return nil, fmt.Errorf("expected array end")
-			}
-
-			return &Node{Kind: Array, Array: items}, nil
-		default:
-			return nil, fmt.Errorf("unexpected delimiter %q", string(v))
+			fields = append(fields, Field{Name: name, Value: value})
 		}
-	case string:
-		return &Node{Kind: String, String: v}, nil
-	case json.Number:
-		return &Node{Kind: Number, Number: v.String()}, nil
-	case bool:
-		return &Node{Kind: Boolean, Bool: v}, nil
-	case nil:
+		if _, err := dec.ReadToken(); err != nil {
+			return nil, err
+		}
+		return &Node{Kind: Object, Object: fields}, nil
+	case '[':
+		items := make([]*Node, 0)
+		for dec.PeekKind() != ']' {
+			item, err := parseValue(dec)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, item)
+		}
+		if _, err := dec.ReadToken(); err != nil {
+			return nil, err
+		}
+		return &Node{Kind: Array, Array: items}, nil
+	case '"':
+		return &Node{Kind: String, String: tok.String()}, nil
+	case '0':
+		return &Node{Kind: Number, Number: tok.String()}, nil
+	case 't', 'f':
+		return &Node{Kind: Boolean, Bool: tok.Bool()}, nil
+	case 'n':
 		return &Node{Kind: Null}, nil
 	default:
-		return nil, fmt.Errorf("unsupported JSON token type %T", tok)
+		return nil, fmt.Errorf("unexpected JSON token %q", tok.Kind())
 	}
 }
 
