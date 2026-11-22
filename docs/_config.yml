@@ -1,7 +1,7 @@
 title: json2mdplan
 description: "Unix-style CLI that generates a Markdown rendering plan from JSON and then uses that plan to deterministically render Markdown from the same JSON input."
 
-remote_theme: just-the-docs/just-the-docs@v0.12.0
+remote_theme: UnitVectorY-Labs/uvy-docs-theme@v0.2.0
 plugins:
   - jekyll-remote-theme
 
