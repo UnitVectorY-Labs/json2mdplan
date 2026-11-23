@@ -1,9 +1,13 @@
 title: json2mdplan
 description: "Unix-style CLI that generates a Markdown rendering plan from JSON and then uses that plan to deterministically render Markdown from the same JSON input."
 
-remote_theme: UnitVectorY-Labs/uvy-docs-theme@v0.2.0
+remote_theme: UnitVectorY-Labs/uvy-docs-theme@v0.4.0
 plugins:
   - jekyll-remote-theme
+
+uvy_docs:
+  license: "MIT License"
+  license_url: "https://github.com/UnitVectorY-Labs/json2mdplan/blob/main/LICENSE"
 
 callouts:
   highlight:
