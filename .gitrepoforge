@@ -8,8 +8,6 @@ config:
   release: release-go
   justfile: true
   status: concept
-  codecov:
-    enabled: false
   docs:
     enabled: true
     domain: json2mdplan.unitvectorylabs.com
